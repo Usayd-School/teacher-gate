@@ -2,8 +2,8 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>بوابة المعلم المتكاملة | مدرسة أُسيد بن حضير</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>بوابة المعلم الاحترافية</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
     
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -11,123 +11,100 @@
 
     <style>
         :root {
-            --bg: #fcfdfe; --white: #ffffff; --primary: #1e293b; --accent: #3b82f6;
-            --border: #eef2f6; --text-muted: #64748b;
-            --exc-bg: #ecfdf5; --exc-txt: #059669;
-            --cre-bg: #f5f3ff; --cre-txt: #7c3aed;
-            --vg-bg: #f0f9ff; --vg-txt: #0284c7;
-            --fa-bg: #fffbeb; --fa-txt: #d97706;
-            --we-bg: #fef2f2; --we-txt: #dc2626;
+            --bg: #f1f5f9; --white: #ffffff; --primary: #1e293b; --accent: #2563eb;
+            --border: #cbd5e1; --pos: #059669; --neg: #e11d48; --skill: #7c3aed;
         }
 
-        body { font-family: 'Cairo', sans-serif; background: var(--bg); margin: 0; color: var(--primary); }
-        
-        /* شاشة تسجيل الدخول */
+        body { font-family: 'Cairo', sans-serif; background: var(--bg); margin: 0; padding-bottom: 40px; }
+
+        /* شاشة الدخول */
         #loginPage { position:fixed; top:0; left:0; width:100%; height:100%; background:var(--primary); z-index:9999; display:flex; align-items:center; justify-content:center; }
-        .login-card { background:white; padding:40px; border-radius:30px; width:90%; max-width:400px; text-align:center; box-shadow: 0 20px 40px rgba(0,0,0,0.2); }
+        .login-card { background:white; padding:30px; border-radius:24px; width:85%; max-width:380px; text-align:center; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.3); }
+
+        .navbar { background: var(--white); padding: 12px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; position: sticky; top:0; z-index:100; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+        .logo-box { background: var(--accent); color: white; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 900; }
+
+        .container { padding: 15px; max-width: 800px; margin: auto; }
+
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+        .stat-card { background: white; padding: 15px; border-radius: 16px; border-bottom: 4px solid var(--accent); text-align: center; }
+        .stat-card h4 { margin: 0; font-size: 13px; color: #64748b; }
+        .stat-card p { margin: 5px 0 0; font-size: 22px; font-weight: 900; color: var(--primary); }
+
+        .control-panel { background: white; border-radius: 20px; padding: 15px; margin-bottom: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+        .inp { width: 100%; padding: 12px; border-radius: 12px; border: 1px solid var(--border); font-family: 'Cairo'; margin-top: 8px; outline:none; box-sizing: border-box; }
         
-        #notification { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: var(--primary); color: white; padding: 12px 35px; border-radius: 50px; font-weight: 700; display: none; z-index: 2000; box-shadow: 0 10px 25px rgba(0,0,0,0.1); border: 1px solid var(--accent); }
-        .navbar { background: var(--white); padding: 15px 5%; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 1000; }
-        .logo-section { display: flex; align-items: center; gap: 10px; }
-        .logo-box { background: var(--accent); color: white; width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 20px; }
-        .teacher-info { display: flex; align-items: center; gap: 12px; background: #f0f7ff; padding: 8px 20px; border-radius: 50px; border: 1px solid #dbeafe; }
-        .t-name { font-weight: 800; font-size: 14px; color: var(--accent); }
+        .student-card { background: white; border-radius: 20px; padding: 18px; margin-bottom: 15px; border: 1px solid var(--border); transition: 0.3s; }
+        .std-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .std-name { font-weight: 800; font-size: 16px; color: var(--primary); }
+
+        /* بنك الرسائل المتطور */
+        .msg-bank { 
+            display: none; 
+            animation: zoomIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1); 
+            background: #f8fafc; padding: 12px; border-radius: 15px; border: 1px solid #e2e8f0; margin-top: 12px;
+        }
+        @keyframes zoomIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+        .cat-title { font-size: 11px; font-weight: 800; color: #64748b; margin: 12px 0 6px; display: block; }
+        .chips-container { display: flex; flex-wrap: wrap; gap: 6px; }
+        .chip { padding: 6px 12px; border-radius: 10px; font-size: 11px; font-weight: 700; cursor: pointer; transition: 0.2s; }
         
-        .container { max-width: 1500px; margin: 30px auto; padding: 0 20px; }
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px; }
-        .stat-card { background: white; padding: 15px; border-radius: 20px; border: 1px solid var(--border); text-align: center; }
-        .stat-card h4 { margin: 0; font-size: 11px; color: var(--text-muted); }
-        .stat-card p { margin: 5px 0 0; font-size: 20px; font-weight: 900; color: var(--accent); }
+        .c-pos { background: #dcfce7; color: #166534; }
+        .c-skill { background: #f3e8ff; color: #6b21a8; }
+        .c-neg { background: #fee2e2; color: #991b1b; }
+        .chip:active { transform: scale(0.9); }
+
+        .msg-area { width: 100%; height: 65px; border-radius: 12px; border: 1px solid var(--border); padding: 10px; font-size: 13px; font-family: 'Cairo'; margin-top: 10px; box-sizing: border-box; resize: none; }
+
+        .btn-send { background: var(--primary); color: white; border: none; width: 100%; padding: 14px; border-radius: 12px; font-weight: 800; margin-top: 10px; font-size: 15px; }
+        .btn-more { background: #f1f5f9; border: 1px solid var(--border); color: var(--primary); width: 100%; padding: 10px; border-radius: 12px; font-weight: 700; font-size: 13px; margin-top: 10px; }
+
+        .sent-badge { display: none; background: #dcfce7; color: #166534; padding: 15px; border-radius: 12px; text-align: center; font-weight: 800; }
+        .row-dim { opacity: 0.4; pointer-events: none; transform: scale(0.98); }
         
-        .control-panel { background: var(--white); border-radius: 25px; padding: 25px; border: 1px solid var(--border); display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 20px; align-items: center; margin-bottom: 30px; }
-        .inp { width: 100%; padding: 12px; border-radius: 14px; border: 1px solid var(--border); font-family: 'Cairo'; font-weight: 700; outline: none; background: #fcfdfe; box-sizing: border-box; }
-        
-        .table-card { background: var(--white); border-radius: 30px; border: 1px solid var(--border); overflow: hidden; }
-        table { width: 100%; border-collapse: collapse; min-width: 1200px; }
-        th { background: #f8fafc; padding: 18px 20px; text-align: right; font-size: 12px; color: var(--text-muted); font-weight: 800; border-bottom: 1px solid var(--border); }
-        td { padding: 20px; border-bottom: 1px solid var(--border); }
-        
-        .std-name { font-weight: 900; font-size: 17px; display: block; }
-        .subj-badge { display: inline-block; background: #eff6ff; color: var(--accent); padding: 2px 10px; border-radius: 6px; font-size: 10px; font-weight: 800; margin-top: 5px; border: 1px solid #dbeafe; }
-        .rank-sel { width: 100%; padding: 10px; border-radius: 12px; border: 1px solid transparent; font-family: 'Cairo'; font-weight: 800; }
-        .lvl-exc { background: var(--exc-bg); color: var(--exc-txt); }
-        .lvl-cre { background: var(--cre-bg); color: var(--cre-txt); }
-        .lvl-vg { background: var(--vg-bg); color: var(--vg-txt); }
-        .lvl-fa { background: var(--fa-bg); color: var(--fa-txt); }
-        .lvl-we { background: var(--we-bg); color: var(--we-txt); }
-        
-        .chips-container { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 12px; max-width: 520px; }
-        .chip { background: #f8fafc; border: 1px solid var(--border); padding: 5px 10px; border-radius: 10px; font-size: 11px; font-weight: 700; cursor: pointer; }
-        .msg-area { width: 100%; height: 85px; border: 1px solid var(--border); border-radius: 15px; padding: 12px; font-family: 'Cairo'; font-size: 13px; resize: none; background: #fcfdfe; }
-        
-        .btn-action { background: var(--primary); color: white; border: none; padding: 12px 25px; border-radius: 12px; font-weight: 800; cursor: pointer; width: 100%; }
-        .sent-badge { display: none; background: var(--exc-bg); color: var(--exc-txt); padding: 10px; border-radius: 12px; text-align: center; font-weight: 900; }
-        .row-dim { opacity: 0.6; background: #f9fafb; pointer-events: none; }
+        #notification { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #10b981; color: white; padding: 12px 30px; border-radius: 50px; display: none; z-index: 10000; font-weight: 700; }
     </style>
 </head>
 <body>
 
 <div id="loginPage">
     <div class="login-card">
-        <div class="logo-box" style="margin:0 auto 20px; width:60px; height:60px; font-size:30px;">أ</div>
-        <h2>دخول المعلمين</h2>
-        <p style="color:var(--text-muted); font-size:13px; margin-bottom:20px;">الرجاء استخدام بيانات الحساب المسلمة لك</p>
-        <input type="text" id="userInp" class="inp" placeholder="اسم المستخدم" style="margin-bottom:15px; border:2px solid var(--border);">
-        <input type="password" id="passInp" class="inp" placeholder="كلمة المرور" style="margin-bottom:20px; border:2px solid var(--border);">
-        <button class="btn-action" onclick="checkAuth()" style="padding:15px;">دخول للنظام</button>
-        <p id="errorMsg" style="color:var(--we-txt); font-size:12px; margin-top:15px; display:none; font-weight:bold;">بيانات الدخول غير صحيحة!</p>
+        <div class="logo-box" style="margin:0 auto 15px; width:50px; height:50px; font-size:24px;">أ</div>
+        <h2 style="margin:0 0 20px;">نظام متابعة الطلاب</h2>
+        <input type="text" id="userInp" class="inp" placeholder="اسم المستخدم">
+        <input type="password" id="passInp" class="inp" placeholder="كلمة المرور">
+        <button class="btn-send" style="margin-top:20px" onclick="checkAuth()">دخول</button>
     </div>
 </div>
 
-<div id="notification">✅ تم الحفظ وإرسال التقرير لولي الأمر بنجاح</div>
+<div id="notification">✅ تم الحفظ بنجاح</div>
 
 <nav class="navbar">
-    <div class="logo-section">
+    <div style="display:flex; align-items:center; gap:8px;">
         <div class="logo-box">أ</div>
-        <div>
-            <h2 style="margin:0; font-size: 18px; font-weight: 900;">بوابة المعلم الرقمية</h2>
-            <small style="color: var(--text-muted); font-weight: 700;">مدرسة أُسيد بن حضير</small>
-        </div>
+        <h2 style="margin:0; font-size: 16px;">مدرسة أُسيد بن حضير</h2>
     </div>
-    <div class="teacher-info">
-        <div style="text-align: left;">
-            <span id="displaySubj" style="font-size: 10px; color: var(--text-muted); display: block; font-weight: 800;">---</span>
-            <span class="t-name" id="displayTeacher">بانتظار الدخول...</span>
-        </div>
-    </div>
+    <div id="teacherName" style="font-size:12px; font-weight:800; color:var(--accent);">...</div>
 </nav>
 
 <div class="container">
     <div class="stats-grid">
         <div class="stat-card"><h4>إجمالي الطلاب</h4><p id="totalStds">0</p></div>
-        <div class="stat-card"><h4>رُصد اليوم</h4><p id="totalSent">0</p></div>
+        <div class="stat-card"><h4>الطلاب المنجزون</h4><p id="totalSent">0</p></div>
     </div>
 
     <div class="control-panel">
-        <div class="group"><label>الفصل المسند</label><select id="selCls" class="inp" onchange="loadStudents()"></select></div>
-        <div class="group"><label>البحث</label><input type="text" id="searchInp" class="inp" placeholder="ابحث..." onkeyup="doSearch()"></div>
-        <div class="group"><label>تعميم الواجب</label><input type="text" id="bulkHw" class="inp" placeholder="صـ ..."></div>
-        <div class="group" style="padding-top: 25px;"><button class="btn-action" onclick="applyBulk()" style="background:var(--accent);">تطبيق للكل</button></div>
+        <div style="display:flex; gap:8px;">
+            <input type="text" id="bulkHw" class="inp" placeholder="اكتب الواجب الجماعي هنا..." style="margin-top:0">
+            <button onclick="applyBulk()" style="background:var(--accent); color:white; border:none; padding:0 15px; border-radius:12px; font-weight:700; white-space:nowrap;">تطبيق للكل</button>
+        </div>
     </div>
 
-    <div class="table-card">
-        <table id="mainTable">
-            <thead>
-                <tr>
-                    <th>بيانات الطالب</th>
-                    <th width="160">المستوى (KPI)</th>
-                    <th width="110">الواجب</th>
-                    <th>رسالة ولي الأمر</th>
-                    <th width="150">الإجراء</th>
-                </tr>
-            </thead>
-            <tbody id="studentsBody"></tbody>
-        </table>
-    </div>
+    <div id="studentsList"></div>
 </div>
 
 <script>
-    // إعدادات Firebase
     const firebaseConfig = {
         apiKey: "AIzaSyCIW17B6y6sG_bdUFqF7FWoVIY9ynXv1B4",
         authDomain: "myschoolproject-4ad92.firebaseapp.com",
@@ -138,116 +115,128 @@
     const database = firebase.database();
 
     let loggedInTeacher = null;
-    let currentSubject = "";
 
-    // التحقق من الدخول
     function checkAuth() {
         const u = document.getElementById('userInp').value;
         const p = document.getElementById('passInp').value;
-        const err = document.getElementById('errorMsg');
-
         database.ref('assignments').once('value', snapshot => {
             const data = snapshot.val();
-            let found = false;
-
             for (let key in data) {
                 if (data[key].teacherUser === u && data[key].teacherPass.toString() === p) {
                     loggedInTeacher = data[key];
-                    found = true; break;
+                    document.getElementById('loginPage').style.display = 'none';
+                    document.getElementById('teacherName').innerText = loggedInTeacher.teacherName;
+                    loadStudents();
+                    return;
                 }
-            }
-
-            if (found) {
-                document.getElementById('loginPage').style.display = 'none';
-                startSession();
-            } else {
-                err.style.display = 'block';
             }
         });
     }
 
-    function startSession() {
-        document.getElementById('displayTeacher').innerText = loggedInTeacher.teacherName;
-        document.getElementById('displaySubj').innerText = "مادة: " + loggedInTeacher.subject;
-        currentSubject = loggedInTeacher.subject;
-
-        const sel = document.getElementById('selCls');
-        sel.innerHTML = `<option value="${loggedInTeacher.className}">${loggedInTeacher.className}</option>`;
-        
-        loadStudents();
-    }
-
     function loadStudents() {
-        const cls = document.getElementById('selCls').value;
-        database.ref('students/' + cls).on('value', snapshot => {
+        database.ref('students/' + loggedInTeacher.className).on('value', snapshot => {
             const students = snapshot.val();
-            const tbody = document.getElementById('studentsBody');
-            tbody.innerHTML = "";
+            const list = document.getElementById('studentsList');
+            list.innerHTML = "";
             let count = 0;
             for(let key in students) {
                 count++;
-                const s = students[key];
-                tbody.innerHTML += `
-                    <tr>
-                        <td><span class="std-name">${s.name}</span><span class="subj-badge">${currentSubject}</span></td>
-                        <td>
-                            <select class="rank-sel lvl-exc" onchange="this.className='rank-sel lvl-'+this.value">
-                                <option value="exc">متميز ✨</option><option value="cre">مبدع 🎨</option>
-                                <option value="vg">جيد جداً 👍</option><option value="fa">مقبول 🆗</option>
+                list.innerHTML += `
+                    <div class="student-card" id="card-${key}">
+                        <div class="std-header">
+                            <span class="std-name">${students[key].name}</span>
+                            <select class="inp rank-sel" style="width:110px; margin:0; font-size:12px; padding:5px">
+                                <option value="exc">ممتاز ⭐</option>
+                                <option value="cre">مبدع ✨</option>
+                                <option value="vg">جيد جداً 👍</option>
+                                <option value="fa">مقبول 🆗</option>
                                 <option value="we">ضعيف ⚠️</option>
                             </select>
-                        </td>
-                        <td><input type="text" class="inp hw-inp" style="text-align: center;" placeholder="صـ"></td>
-                        <td>
+                        </div>
+                        
+                        <input type="text" class="inp hw-inp" placeholder="الواجب الصفي/المنزلي">
+
+                        <button class="btn-more" onclick="toggleBank('${key}')">📝 تقييم وملاحظات إضافية</button>
+
+                        <div class="msg-bank" id="bank-${key}">
+                            <span class="cat-title">الإنجاز والتحفيز 🌟</span>
                             <div class="chips-container">
-                                <span class="chip" onclick="put(this, 'تفاعل مميز اليوم.')">مشاركة مميزة 👏</span>
-                                <span class="chip" onclick="put(this, 'أتم الواجب بنجاح.')">حل الواجب ✅</span>
-                                <span class="chip" onclick="put(this, 'لم يحل الواجب.')">لم يحل ❌</span>
-                                <span class="chip" onclick="put(this, 'نأمل المتابعة المنزلية.')">متابعة 📉</span>
+                                <span class="chip c-pos" onclick="put('${key}','طالب متميز، تفاعلك يثري الحصة.')">تفاعل مميز</span>
+                                <span class="chip c-pos" onclick="put('${key}','إجاباتك ذكية ومنطقية، بارك الله فيك.')">ذكاء وسرعة</span>
+                                <span class="chip c-pos" onclick="put('${key}','مستوى رائع وتطور ملحوظ في الأداء.')">تطور مستمر</span>
+                                <span class="chip c-pos" onclick="put('${key}','طالب مجتهد، حافظ على هذا النشاط.')">اجتهاد</span>
                             </div>
-                            <textarea class="msg-area" placeholder="الملاحظة..."></textarea>
-                        </td>
-                        <td>
-                            <button class="btn-action" onclick="send('${key}', this)">حفظ وإرسال ✉️</button>
-                            <div class="sent-badge">✅ تم الإرسال</div>
-                        </td>
-                    </tr>`;
+
+                            <span class="cat-title">المهارات والكتابة ✍️</span>
+                            <div class="chips-container">
+                                <span class="chip c-skill" onclick="put('${key}','خطك جميل ودفترك قمة في النظام.')">خط ونظام</span>
+                                <span class="chip c-skill" onclick="put('${key}','قراءة طلقة ومخارج حروف صحيحة.')">قراءة متميزة</span>
+                                <span class="chip c-skill" onclick="put('${key}','مهارة التحليل والاستنتاج لديك عالية.')">مهارة تفكير</span>
+                                <span class="chip c-skill" onclick="put('${key}','أتممت جميع التكليفات بدقة وإتقان.')">إتقان العمل</span>
+                            </div>
+
+                            <span class="cat-title">تنبيهات هامة ⚠️</span>
+                            <div class="chips-container">
+                                <span class="chip c-neg" onclick="put('${key}','يرجى إحضار الكتاب والأدوات المدرسية.')">نقص أدوات</span>
+                                <span class="chip c-neg" onclick="put('${key}','لم يحل الواجب المطلوب لهذا اليوم.')">عدم حل واجب</span>
+                                <span class="chip c-neg" onclick="put('${key}','كثير الحركة والحديث الجانبي في الحصة.')">تشتت حركة</span>
+                                <span class="chip c-neg" onclick="put('${key}','مستوى الطالب متراجع، نأمل المتابعة.')">تراجع مستوى</span>
+                            </div>
+                            <textarea class="msg-area" placeholder="أضف ملاحظة خاصة بولي الأمر..."></textarea>
+                        </div>
+
+                        <button class="btn-send" onclick="send('${key}', this)">حفظ وإرسال التقرير</button>
+                        <div class="sent-badge">✅ تم إرسال التقرير بنجاح</div>
+                    </div>`;
             }
             document.getElementById('totalStds').innerText = count;
         });
     }
 
-    function put(chip, txt) { chip.closest('tr').querySelector('.msg-area').value = txt; }
-    function applyBulk() { document.querySelectorAll('.hw-inp').forEach(i => i.value = document.getElementById('bulkHw').value); }
+    function toggleBank(id) {
+        const bank = document.getElementById('bank-' + id);
+        bank.style.display = (bank.style.display === 'block') ? 'none' : 'block';
+    }
+
+    function put(id, txt) { 
+        document.querySelector(`#card-${id} .msg-area`).value = txt; 
+    }
+
+    function applyBulk() { 
+        const val = document.getElementById('bulkHw').value;
+        document.querySelectorAll('.hw-inp').forEach(i => {
+            if(!i.closest('.student-card').classList.contains('row-dim')) i.value = val;
+        }); 
+        showNotify("✅ تم تطبيق الواجب للكل");
+    }
 
     function send(stdKey, btn) {
-        const row = btn.closest('tr');
+        const card = btn.closest('.student-card');
         const data = {
-            date: new Date().toLocaleDateString(),
-            level: row.querySelector('.rank-sel').value,
-            homework: row.querySelector('.hw-inp').value,
-            message: row.querySelector('.msg-area').value,
-            subject: currentSubject
+            date: new Date().toLocaleDateString('ar-SA'),
+            level: card.querySelector('.rank-sel').value,
+            homework: card.querySelector('.hw-inp').value,
+            message: card.querySelector('.msg-area').value,
+            subject: loggedInTeacher.subject,
+            teacher: loggedInTeacher.teacherName
         };
 
         database.ref('evaluations/' + loggedInTeacher.className + '/' + stdKey).push(data).then(() => {
             btn.style.display = 'none';
-            row.querySelector('.sent-badge').style.display = 'block';
-            row.classList.add('row-dim');
-            notify();
+            card.querySelector('.btn-more').style.display = 'none';
+            card.querySelector('.msg-bank').style.display = 'none';
+            card.querySelector('.sent-badge').style.display = 'block';
+            card.classList.add('row-dim');
+            showNotify("✅ تم الحفظ بنجاح");
+            document.getElementById('totalSent').innerText = parseInt(document.getElementById('totalSent').innerText) + 1;
         });
     }
 
-    function notify() {
+    function showNotify(txt) {
         const n = document.getElementById('notification');
+        n.innerText = txt;
         n.style.display = 'block';
-        setTimeout(() => n.style.display = 'none', 3000);
-        document.getElementById('totalSent').innerText = parseInt(document.getElementById('totalSent').innerText) + 1;
-    }
-
-    function doSearch() {
-        let v = document.getElementById('searchInp').value.toUpperCase();
-        document.querySelectorAll("#studentsBody tr").forEach(r => r.style.display = r.innerText.toUpperCase().includes(v) ? "" : "none");
+        setTimeout(() => n.style.display = 'none', 2000);
     }
 </script>
 </body>
