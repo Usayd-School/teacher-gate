@@ -16,7 +16,7 @@
 
     <style>
         :root {
-            --bg: #f8fafc;
+            --bg: #f1f5f9;
             --primary: #4f46e5;
             --secondary: #8b5cf6;
             --dark: #0f172a;
@@ -31,7 +31,7 @@
         }
 
         * { box-sizing: border-box; font-family: 'Cairo', sans-serif; -webkit-tap-highlight-color: transparent; }
-        body { margin: 0; background: #f1f5f9; color: var(--dark); padding-bottom: 30px; min-height: 100vh; }
+        body { margin: 0; background: var(--bg); color: var(--dark); padding-bottom: 30px; min-height: 100vh; }
 
         #loginPage { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, var(--primary), var(--secondary)); z-index: 9999; padding: 20px; }
         .login-card { width: 100%; max-width: 400px; background: rgba(255, 255, 255, 0.95); border-radius: 24px; padding: 35px 25px; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.2); }
@@ -42,8 +42,14 @@
 
         .container { padding: 15px; max-width: 800px; margin: auto; }
 
+        /* مؤشر حضور وتواجد المعلم المطور */
+        .attendance-tracker { background: var(--surface); border-radius: 16px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); border: 1px solid #e2e8f0; }
+        .tracker-header { display: flex; justify-content: space-between; align-items: center; font-size: 13px; font-weight: 700; margin-bottom: 8px; }
+        .progress-bar-bg { background: #e2e8f0; height: 10px; border-radius: 20px; overflow: hidden; position: relative; }
+        .progress-bar-fill { background: linear-gradient(90deg, #22c55e, #4f46e5); width: 0%; height: 100%; transition: width 0.5s ease; }
+
         .stats-container { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 20px; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; }
-        .stat-card { flex: 0 0 130px; scroll-snap-align: start; background: var(--surface); border-radius: 16px; padding: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); border: 1px solid #e2e8f0; text-align: center; transition: 0.2s; cursor: pointer; }
+        .stat-card { flex: 0 0 130px; scroll-snap-align: start; background: var(--surface); border-radius: 16px; padding: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); border: 1px solid #e2e8f0; text-align: center; cursor: pointer; }
         .stat-card h4 { margin: 0; color: var(--muted); font-size: 11px; font-weight: 700; }
         .stat-card p { margin: 6px 0 0; font-size: 22px; font-weight: 900; color: var(--primary); }
 
@@ -51,52 +57,46 @@
         .form-group { display: flex; flex-direction: column; gap: 4px; }
         .form-group label { font-size: 12px; font-weight: 700; color: var(--muted); }
         
-        .inp { width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 12px; font-size: 14px; font-weight: 600; background: #f8fafc; outline: none; transition: 0.2s; }
+        .inp { width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 12px; font-size: 14px; font-weight: 600; background: #f8fafc; outline: none; }
         .inp:focus { border-color: var(--primary); background: #fff; }
         
-        .btn-action { border: none; border-radius: 12px; padding: 12px 20px; background: linear-gradient(135deg,var(--primary),var(--secondary)); color: white; font-weight: 700; cursor: pointer; transition: 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+        .btn-action { border: none; border-radius: 12px; padding: 12px 18px; background: linear-gradient(135deg,var(--primary),var(--secondary)); color: white; font-weight: 700; cursor: pointer; transition: 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 14px; }
         .btn-action:active { transform: scale(0.98); }
 
-        /* تعديل تصميم الكروت ليدعم الضغط والتوسيع */
+        /* منطقة الأزرار المحدثة مع الرفع */
+        .action-group-grid { display: grid; grid-template-columns: 1fr auto; gap: 10px; margin-top: 5px; }
+        .btn-file-label { background: #f1f5f9; border: 2px dashed #cbd5e1; color: var(--dark); padding: 12px; border-radius: 12px; font-weight: 700; font-size: 13px; text-align: center; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; }
+        .btn-file-label.loaded { background: var(--exc-bg); color: var(--exc-txt); border-color: #22c55e; }
+
         .student-cards-list { display: flex; flex-direction: column; gap: 12px; }
         .student-card { background: var(--surface); border-radius: 16px; padding: 0; box-shadow: 0 2px 4px rgba(0,0,0,0.02); border: 1px solid #e2e8f0; transition: all 0.3s ease; position: relative; overflow: hidden; }
         
-        /* ترويسة الكارت القابلة للنقر */
-        .student-header { padding: 16px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; background: var(--surface); user-select: none; }
-        .student-header:active { background: #f8fafc; }
+        .student-header { padding: 16px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; background: var(--surface); }
         .std-name { font-weight: 900; font-size: 16px; color: var(--dark); }
-        
-        /* سهم المؤشر التفاعلي */
         .arrow-icon { font-size: 14px; color: var(--muted); transition: transform 0.3s ease; }
         
-        /* حاوية الخيارات المخفية افتراضياً */
-        .card-details { padding: 0 16px; max-height: 0; overflow: hidden; transition: max-height 0.3s ease, padding 0.3s ease; background: #fafafa; border-top: 1px transparent dashed; }
+        .card-details { padding: 0 16px; max-height: 0; overflow: hidden; transition: max-height 0.3s ease, padding 0.3s ease; background: #fafafa; }
         
-        /* الحالة النشطة عند فتح الكارت */
         .student-card.expanded { box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05); border-color: #cbd5e1; }
-        .student-card.expanded .card-details { padding: 16px; max-height: 500px; border-top-color: #f1f5f9; }
+        .student-card.expanded .card-details { padding: 16px; max-height: 520px; border-top: 1px dashed #f1f5f9; }
         .student-card.expanded .arrow-icon { transform: rotate(180deg); color: var(--primary); }
 
         .card-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
-
         .chips-container { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
-        .chip { padding: 6px 10px; border-radius: 8px; background: #f1f5f9; font-size: 11px; font-weight: 700; cursor: pointer; transition: 0.2s; border: 1px solid transparent; }
-        .chip:active, .chip.selected { background: #e0e7ff; border-color: var(--primary); color: var(--primary); }
+        .chip { padding: 6px 10px; border-radius: 8px; background: #f1f5f9; font-size: 11px; font-weight: 700; cursor: pointer; }
+        .chip.selected { background: #e0e7ff; border-color: var(--primary); color: var(--primary); }
 
         .msg-area { width: 100%; min-height: 50px; border-radius: 10px; border: 1px solid #e2e8f0; padding: 10px; font-size: 13px; background: #f8fafc; resize: none; }
-
-        .sent-badge { display: none; background: var(--exc-bg); color: var(--exc-txt); border-radius: 10px; padding: 10px; font-weight: 900; text-align: center; font-size: 14px; width: 100%; }
+        .sent-badge { display: none; background: var(--exc-bg); color: var(--exc-txt); border-radius: 10px; padding: 10px; font-weight: 900; text-align: center; font-size: 14px; }
         .row-dim { opacity: 0.5; pointer-events: none; }
-        .row-dim .card-details { max-height: 0 !important; padding: 0 !important; }
 
-        /* الأشرطة الجانبية الملونة حسب التقييم */
         .card-exc { border-right: 6px solid #22c55e; }
         .card-cre { border-right: 6px solid #a855f7; }
         .card-vg { border-right: 6px solid #3b82f6; }
         .card-fa { border-right: 6px solid #eab308; }
         .card-we { border-right: 6px solid #ef4444; }
 
-        #notification { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--dark); color: white; padding: 12px 24px; border-radius: 50px; font-weight: 700; display: none; z-index: 6000; box-shadow: 0 10px 25px rgba(0,0,0,0.2); font-size: 14px; }
+        #notification { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--dark); color: white; padding: 12px 24px; border-radius: 50px; font-weight: 700; display: none; z-index: 6000; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
         #studentsPopup { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 5000; display: none; align-items: center; justify-content: center; padding: 20px; }
         .popup-content { width: 100%; max-width: 400px; background: white; border-radius: 24px; padding: 20px; max-height: 75vh; overflow-y: auto; }
     </style>
@@ -119,7 +119,7 @@
 <div id="studentsPopup">
     <div class="popup-content">
         <h3 id="popupTitle" style="margin-top:0; font-weight:900;">القائمة</h3>
-        <div id="popupStudents" style="max-height: 250px; overflow-y:auto;"></div>
+        <div id="popupStudents"></div>
         <button class="btn-action" onclick="closePopup()" style="width:100%; margin-top:15px; background:#64748b;">إغلاق</button>
     </div>
 </div>
@@ -136,6 +136,17 @@
 </nav>
 
 <div class="container">
+    <!-- مؤشر متابعة حضور ورصد المعلم اليومي الجديد -->
+    <div class="attendance-tracker">
+        <div class="tracker-header">
+            <span style="color: var(--dark)">📡 حالة رصد وتواجد المعلم اليوم:</span>
+            <span id="attendanceStatus" style="color: var(--primary)">في انتظار الرصد (0%)</span>
+        </div>
+        <div class="progress-bar-bg">
+            <div id="attendanceProgress" class="progress-bar-fill"></div>
+        </div>
+    </div>
+
     <div class="stats-container">
         <div class="stat-card"><h4>إجمالي الطلاب</h4><p id="totalStds">0</p></div>
         <div class="stat-card"><h4>رُصد اليوم</h4><p id="totalSent">0</p></div>
@@ -162,7 +173,16 @@
                 <button class="btn-action" onclick="applyBulk()">تطبيق</button>
             </div>
         </div>
-        <button class="btn-action" onclick="sendAll()" style="background:var(--dark); width:100%; margin-top:5px;">إرسال ورصد للجميع دفعة واحدة</button>
+        
+        <!-- تعديل الهيكلة لإضافة رفع الملف بجانب زر الإرسال للكل مباشرة كطلبك -->
+        <div class="action-group-grid">
+            <button class="btn-action" onclick="sendAll()" style="background:var(--dark);">إرسال للكل ورصد الفصل</button>
+            
+            <label for="worksheetFile" id="fileLabel" class="btn-file-label">
+                📎 ارفاق ورقة عمل
+            </label>
+            <input type="file" id="worksheetFile" style="display:none;" onchange="handleFileSelected(this)">
+        </div>
     </div>
 
     <div class="student-cards-list" id="studentsContainer"></div>
@@ -181,6 +201,7 @@ const database = firebase.database();
 
 let loggedInTeacher = null;
 let currentSubject = "";
+let attachedFileBase64 = ""; // لتخزين ملف ورقة العمل المرفق
 
 function checkAuth(){
     const u = document.getElementById('userInp').value.trim();
@@ -212,7 +233,6 @@ function startSession(){
     
     const sel = document.getElementById('selCls');
     sel.innerHTML = '';
-    
     const classes = loggedInTeacher.className.split(',');
     classes.forEach(cls => {
         sel.innerHTML += `<option value="${cls.trim()}">${cls.trim()}</option>`;
@@ -234,7 +254,6 @@ function loadStudents(){
             const s = students[key];
             container.innerHTML += `
             <div class="student-card" data-key="${key}" id="card_${key}">
-                <!-- عند الضغط على الهيدر يتم تشغيل دالة التوسيع -->
                 <div class="student-header" onclick="toggleCard('${key}')">
                     <div>
                         <div class="std-name">${s.name}</div>
@@ -243,7 +262,6 @@ function loadStudents(){
                     <div class="arrow-icon">▼</div>
                 </div>
                 
-                <!-- تفاصيل الخيارات المخفية -->
                 <div class="card-details">
                     <div class="card-row">
                         <div>
@@ -301,30 +319,62 @@ function loadStudents(){
         }
         document.getElementById('totalStds').innerText = count;
         resetStats();
+        updateAttendanceIndicator();
     });
 }
 
-// دالة التوسيع والطي التفاعلية عند النقر على كارت الطالب
+// دالة تفاعلية جديدة لتحويل وقراءة الملف المرفق بجانب الزر فوراً
+function handleFileSelected(input) {
+    if (input.files && input.files[0]) {
+        const file = input.files[0];
+        const reader = new FileReader();
+        
+        reader.onload = function(e) {
+            attachedFileBase64 = e.target.result; // الاحتفاظ بنسخة النص المشفر للملف لارسالها
+            const label = document.getElementById('fileLabel');
+            label.innerText = "✓ تم إرفاق: " + file.name.substring(0, 10) + "...";
+            label.classList.add('loaded');
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+// دالة تحديث مؤشر الحضور والتواجد الفعلي للمعلم بشكل رقمي وبياني سريع
+function updateAttendanceIndicator() {
+    const total = parseInt(document.getElementById('totalStds').innerText) || 0;
+    const sent = parseInt(document.getElementById('totalSent').innerText) || 0;
+    
+    if (total === 0) return;
+    
+    // حساب النسبة المئوية لتغطية حضور المعلم ورصده للفصل
+    const percentage = Math.round((sent / total) * 100);
+    const fill = document.getElementById('attendanceProgress');
+    const statusText = document.getElementById('attendanceStatus');
+    
+    fill.style.width = percentage + "%";
+    
+    if(percentage === 0) {
+        statusText.innerText = "لم يتم الرصد بعد (0%)";
+        statusText.style.color = "var(--muted)";
+    } else if (percentage < 100) {
+        statusText.innerText = `جاري الرصد التفاعلي (${percentage}%)`;
+        statusText.style.color = "var(--secondary)";
+    } else {
+        statusText.innerText = "مكتمل وحاضر تماماً (100%) ✓";
+        statusText.style.color = "#166534";
+    }
+}
+
 function toggleCard(key) {
     const card = document.getElementById('card_' + key);
-    
-    // إذا كانت البطاقة تم رصدها وحفظها مسبقاً، لا تفتحها
     if(card.classList.contains('row-dim')) return;
-
     const isExpanded = card.classList.contains('expanded');
-    
-    // إغلاق أي كارت آخر مفتوح ليبقى التركيز على طالب واحد (اختياري، يسهل التصفح)
     document.querySelectorAll('.student-card').forEach(c => c.classList.remove('expanded'));
-    
-    // فتح أو إغلاق الكارت الحالي
-    if (!isExpanded) {
-        card.classList.add('expanded');
-    }
+    if (!isExpanded) card.classList.add('expanded');
 }
 
 function updateCardStyle(key, value) {
     const card = document.getElementById('card_' + key);
-    // إزالة ألوان الحالات القديمة مع الحفاظ على كونه ممتداً (expanded)
     card.className = "student-card expanded"; 
     if(value) card.classList.add('card-' + value);
     updateStats();
@@ -382,7 +432,8 @@ function send(stdKey, btn){
         award: row.querySelector('.award-sel').value,
         warning: row.querySelector('.warning-sel').value,
         message: row.querySelector('.msg-area').value,
-        subject: currentSubject
+        subject: currentSubject,
+        worksheet: attachedFileBase64 // الحاق ملف ورقة العمل في حال تم رفعه
     };
     
     const cls = document.getElementById('selCls').value;
@@ -396,7 +447,6 @@ function send(stdKey, btn){
 }
 
 function sendAll(){
-    // فتح الكروت غير المرصودة برمجياً لمحاكاة ضغط زر الحفظ داخلها
     document.querySelectorAll('.student-card:not(.row-dim) .save-btn').forEach(btn => btn.click());
 }
 
@@ -405,6 +455,7 @@ function notify(){
     n.style.display = 'block';
     setTimeout(() => n.style.display = 'none', 2000);
     document.getElementById('totalSent').innerText = parseInt(document.getElementById('totalSent').innerText) + 1;
+    updateAttendanceIndicator(); // تحديث المؤشر فور الحفظ
 }
 
 function doSearch(){
