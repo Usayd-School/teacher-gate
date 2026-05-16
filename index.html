@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>بوابة المعلم الرقمية - نسخة الهاتف</title>
+    <title>بوابة المعلم الرقمية - نسخة الهاتف المطورة</title>
     
-    <!-- تعريف التطبيق للهواتف PWA -->
     <meta name="theme-color" content="#4f46e5">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -24,7 +23,6 @@
             --muted: #64748b;
             --surface: #ffffff;
             
-            /* ألوان الحالات والتقييمات */
             --exc-bg: #dcfce7; --exc-txt: #166534;
             --cre-bg: #f3e8ff; --cre-txt: #6b21a8;
             --vg-bg: #dbeafe; --vg-txt: #1e40af;
@@ -35,24 +33,20 @@
         * { box-sizing: border-box; font-family: 'Cairo', sans-serif; -webkit-tap-highlight-color: transparent; }
         body { margin: 0; background: #f1f5f9; color: var(--dark); padding-bottom: 30px; min-height: 100vh; }
 
-        /* شاشة الدخول المطورّة للجوال */
         #loginPage { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, var(--primary), var(--secondary)); z-index: 9999; padding: 20px; }
         .login-card { width: 100%; max-width: 400px; background: rgba(255, 255, 255, 0.95); border-radius: 24px; padding: 35px 25px; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.2); }
         .login-card h2 { margin: 0 0 25px; color: var(--dark); font-weight: 900; font-size: 24px; }
 
-        /* الهيدر العشبي المريح للعين */
         .navbar { background: var(--surface); padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); position: sticky; top: 0; z-index: 1000; }
         .logo-box { width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: 900; background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; font-size: 18px; }
 
         .container { padding: 15px; max-width: 800px; margin: auto; }
 
-        /* شبكة الإحصائيات المرنة للتمرير الأفقي السريع في الجوال */
         .stats-container { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 20px; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; }
         .stat-card { flex: 0 0 130px; scroll-snap-align: start; background: var(--surface); border-radius: 16px; padding: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); border: 1px solid #e2e8f0; text-align: center; transition: 0.2s; cursor: pointer; }
         .stat-card h4 { margin: 0; color: var(--muted); font-size: 11px; font-weight: 700; }
         .stat-card p { margin: 6px 0 0; font-size: 22px; font-weight: 900; color: var(--primary); }
 
-        /* لوحة التحكم */
         .control-panel { background: var(--surface); border-radius: 20px; padding: 15px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 20px; display: flex; flex-direction: column; gap: 12px; }
         .form-group { display: flex; flex-direction: column; gap: 4px; }
         .form-group label { font-size: 12px; font-weight: 700; color: var(--muted); }
@@ -63,34 +57,45 @@
         .btn-action { border: none; border-radius: 12px; padding: 12px 20px; background: linear-gradient(135deg,var(--primary),var(--secondary)); color: white; font-weight: 700; cursor: pointer; transition: 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
         .btn-action:active { transform: scale(0.98); }
 
-        /* حاوية الطلاب: تحويل الجدول لبطاقات (Cards) لتناسب الجوال بنسبة 100% */
-        .student-cards-list { display: flex; flex-direction: column; gap: 15px; }
-        .student-card { background: var(--surface); border-radius: 20px; padding: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02); border: 1px solid #e2e8f0; transition: 0.3s; position: relative; }
+        /* تعديل تصميم الكروت ليدعم الضغط والتوسيع */
+        .student-cards-list { display: flex; flex-direction: column; gap: 12px; }
+        .student-card { background: var(--surface); border-radius: 16px; padding: 0; box-shadow: 0 2px 4px rgba(0,0,0,0.02); border: 1px solid #e2e8f0; transition: all 0.3s ease; position: relative; overflow: hidden; }
         
-        .student-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px dashed #f1f5f9; padding-bottom: 8px; }
+        /* ترويسة الكارت القابلة للنقر */
+        .student-header { padding: 16px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; background: var(--surface); user-select: none; }
+        .student-header:active { background: #f8fafc; }
         .std-name { font-weight: 900; font-size: 16px; color: var(--dark); }
+        
+        /* سهم المؤشر التفاعلي */
+        .arrow-icon { font-size: 14px; color: var(--muted); transition: transform 0.3s ease; }
+        
+        /* حاوية الخيارات المخفية افتراضياً */
+        .card-details { padding: 0 16px; max-height: 0; overflow: hidden; transition: max-height 0.3s ease, padding 0.3s ease; background: #fafafa; border-top: 1px transparent dashed; }
+        
+        /* الحالة النشطة عند فتح الكارت */
+        .student-card.expanded { box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05); border-color: #cbd5e1; }
+        .student-card.expanded .card-details { padding: 16px; max-height: 500px; border-top-color: #f1f5f9; }
+        .student-card.expanded .arrow-icon { transform: rotate(180deg); color: var(--primary); }
 
         .card-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
 
-        /* الكبسولات السريعة للملاحظات */
         .chips-container { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
         .chip { padding: 6px 10px; border-radius: 8px; background: #f1f5f9; font-size: 11px; font-weight: 700; cursor: pointer; transition: 0.2s; border: 1px solid transparent; }
         .chip:active, .chip.selected { background: #e0e7ff; border-color: var(--primary); color: var(--primary); }
 
         .msg-area { width: 100%; min-height: 50px; border-radius: 10px; border: 1px solid #e2e8f0; padding: 10px; font-size: 13px; background: #f8fafc; resize: none; }
 
-        /* حالات البطاقة عند الحفظ */
         .sent-badge { display: none; background: var(--exc-bg); color: var(--exc-txt); border-radius: 10px; padding: 10px; font-weight: 900; text-align: center; font-size: 14px; width: 100%; }
-        .row-dim { opacity: 0.4; pointer-events: none; transform: scale(0.98); }
+        .row-dim { opacity: 0.5; pointer-events: none; }
+        .row-dim .card-details { max-height: 0 !important; padding: 0 !important; }
 
-        /* الألوان الديناميكية للبطاقة حسب التقييم */
+        /* الأشرطة الجانبية الملونة حسب التقييم */
         .card-exc { border-right: 6px solid #22c55e; }
         .card-cre { border-right: 6px solid #a855f7; }
         .card-vg { border-right: 6px solid #3b82f6; }
         .card-fa { border-right: 6px solid #eab308; }
         .card-we { border-right: 6px solid #ef4444; }
 
-        /* النوافذ المنبثقة والإشعارات */
         #notification { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--dark); color: white; padding: 12px 24px; border-radius: 50px; font-weight: 700; display: none; z-index: 6000; box-shadow: 0 10px 25px rgba(0,0,0,0.2); font-size: 14px; }
         #studentsPopup { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 5000; display: none; align-items: center; justify-content: center; padding: 20px; }
         .popup-content { width: 100%; max-width: 400px; background: white; border-radius: 24px; padding: 20px; max-height: 75vh; overflow-y: auto; }
@@ -98,7 +103,6 @@
 </head>
 <body>
 
-<!-- شاشة الدخول -->
 <div id="loginPage">
     <div class="login-card">
         <div class="logo-box" style="margin:0 auto 15px">أ</div>
@@ -110,10 +114,8 @@
     </div>
 </div>
 
-<!-- الإشعارات السريعة -->
 <div id="notification">تم الحفظ بنجاح ✓</div>
 
-<!-- نافذة عرض الطلاب التفصيلية -->
 <div id="studentsPopup">
     <div class="popup-content">
         <h3 id="popupTitle" style="margin-top:0; font-weight:900;">القائمة</h3>
@@ -122,7 +124,6 @@
     </div>
 </div>
 
-<!-- البار العلوي -->
 <nav class="navbar">
     <div style="display:flex; gap:10px; align-items:center;">
         <div class="logo-box">أ</div>
@@ -135,7 +136,6 @@
 </nav>
 
 <div class="container">
-    <!-- شريط الإحصائيات (أفقي وسريع التصفح باللمس) -->
     <div class="stats-container">
         <div class="stat-card"><h4>إجمالي الطلاب</h4><p id="totalStds">0</p></div>
         <div class="stat-card"><h4>رُصد اليوم</h4><p id="totalSent">0</p></div>
@@ -146,7 +146,6 @@
         <div class="stat-card" onclick="showStudentsList('bronze')"><h4>🥉 برونزية</h4><p id="bronzeCount">0</p></div>
     </div>
 
-    <!-- لوحة التحكم الذكية -->
     <div class="control-panel">
         <div class="form-group">
             <label>الفصل الدراسي</label>
@@ -166,12 +165,10 @@
         <button class="btn-action" onclick="sendAll()" style="background:var(--dark); width:100%; margin-top:5px;">إرسال ورصد للجميع دفعة واحدة</button>
     </div>
 
-    <!-- قائمة الطلاب (تحولت بالكامل إلى نظام كروت مخصص للهاتف) -->
     <div class="student-cards-list" id="studentsContainer"></div>
 </div>
 
 <script>
-// إعدادات الفايربيس الأساسية
 const firebaseConfig = {
     apiKey: "AIzaSyCIW17B6y6sG_bdUFqF7FWoVIY9ynXv1B4",
     authDomain: "myschoolproject-4ad92.firebaseapp.com",
@@ -185,7 +182,6 @@ const database = firebase.database();
 let loggedInTeacher = null;
 let currentSubject = "";
 
-// تسجيل الدخول والتحقق الديناميكي
 function checkAuth(){
     const u = document.getElementById('userInp').value.trim();
     const p = document.getElementById('passInp').value.trim();
@@ -209,7 +205,6 @@ function checkAuth(){
     });
 }
 
-// بناء الجلسة ودعم الفصول المتعددة
 function startSession(){
     document.getElementById('displayTeacher').innerText = loggedInTeacher.teacherName;
     document.getElementById('displaySubj').innerText = 'مادة: ' + loggedInTeacher.subject;
@@ -218,7 +213,6 @@ function startSession(){
     const sel = document.getElementById('selCls');
     sel.innerHTML = '';
     
-    // إذا كان الحساب يحتوي على فصول متعددة مفصولة بفاصلة أو فصل واحد
     const classes = loggedInTeacher.className.split(',');
     classes.forEach(cls => {
         sel.innerHTML += `<option value="${cls.trim()}">${cls.trim()}</option>`;
@@ -227,7 +221,6 @@ function startSession(){
     loadStudents();
 }
 
-// جلب الطلاب وعرضهم على هيئة كروت متجاوبة مع اللمس والجوال
 function loadStudents(){
     const cls = document.getElementById('selCls').value;
     database.ref('students/' + cls).on('value', snapshot=>{
@@ -241,64 +234,69 @@ function loadStudents(){
             const s = students[key];
             container.innerHTML += `
             <div class="student-card" data-key="${key}" id="card_${key}">
-                <div class="student-header">
+                <!-- عند الضغط على الهيدر يتم تشغيل دالة التوسيع -->
+                <div class="student-header" onclick="toggleCard('${key}')">
                     <div>
                         <div class="std-name">${s.name}</div>
-                        <div style="font-size:10px; color:var(--muted)">${currentSubject}</div>
+                        <div style="font-size:10px; color:var(--muted)">انقر للاختيارات أو الرصد</div>
                     </div>
+                    <div class="arrow-icon">▼</div>
                 </div>
                 
-                <div class="card-row">
-                    <div>
-                        <label style="font-size:11px; font-weight:700; color:var(--muted)">التقييم</label>
-                        <select class="inp rank-sel" onchange="updateCardStyle('${key}', this.value)">
-                            <option value="">اختر التقييم</option>
-                            <option value="exc">متميز ✨</option>
-                            <option value="cre">مبدع 🎨</option>
-                            <option value="vg">جيد جداً 👍</option>
-                            <option value="fa">مقبول 🆗</option>
-                            <option value="we">ضعيف ⚠️</option>
-                        </select>
+                <!-- تفاصيل الخيارات المخفية -->
+                <div class="card-details">
+                    <div class="card-row">
+                        <div>
+                            <label style="font-size:11px; font-weight:700; color:var(--muted)">التقييم</label>
+                            <select class="inp rank-sel" onchange="updateCardStyle('${key}', this.value)">
+                                <option value="">اختر التقييم</option>
+                                <option value="exc">متميز ✨</option>
+                                <option value="cre">مبدع 🎨</option>
+                                <option value="vg">جيد جداً 👍</option>
+                                <option value="fa">مقبول 🆗</option>
+                                <option value="we">ضعيف ⚠️</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="font-size:11px; font-weight:700; color:var(--muted)">الواجب الدراسي</label>
+                            <input type="text" class="inp hw-inp" placeholder="صـ">
+                        </div>
                     </div>
-                    <div>
-                        <label style="font-size:11px; font-weight:700; color:var(--muted)">الواجب الدراسي</label>
-                        <input type="text" class="inp hw-inp" placeholder="صـ">
-                    </div>
-                </div>
 
-                <div class="card-row">
-                    <div>
-                        <select class="inp award-sel" onchange="updateAwards()">
-                            <option value="">🏆 الجائزة</option>
-                            <option value="gold">🥇 ذهبية</option>
-                            <option value="silver">🥈 فضية</option>
-                            <option value="bronze">🥉 برونزية</option>
-                        </select>
+                    <div class="card-row">
+                        <div>
+                            <select class="inp award-sel" onchange="updateAwards()">
+                                <option value="">🏆 الجائزة</option>
+                                <option value="gold">🥇 ذهبية</option>
+                                <option value="silver">🥈 فضية</option>
+                                <option value="bronze">🥉 برونزية</option>
+                            </select>
+                        </div>
+                        <div>
+                            <select class="inp warning-sel">
+                                <option value="">⚠️ الإجراء</option>
+                                <option value="yellow">🟨 انذار أول</option>
+                                <option value="red">🟥 انذار أخير</option>
+                                <option value="warning">📌 خصم درجة</option>
+                            </select>
+                        </div>
                     </div>
-                    <div>
-                        <select class="inp warning-sel">
-                            <option value="">⚠️ الإجراء</option>
-                            <option value="yellow">🟨 انذار أول</option>
-                            <option value="red">🟥 انذار أخير</option>
-                            <option value="warning">📌 خصم درجة</option>
-                        </select>
-                    </div>
-                </div>
 
-                <div>
-                    <div class="chips-container">
-                        <span class="chip" onclick="put(this,'تفاعل مميز اليوم')">👏 مشاركة</span>
-                        <span class="chip" onclick="put(this,'أتم الواجب بنجاح')">✅ حل الواجب</span>
-                        <span class="chip" onclick="put(this,'لم يحل الواجب')">❌ لم يحل</span>
-                        <span class="chip" onclick="put(this,'مشاغب بالحصة')">🗣️ مشاغب</span>
+                    <div>
+                        <div class="chips-container">
+                            <span class="chip" onclick="put(this,'تفاعل مميز اليوم')">👏 مشاركة</span>
+                            <span class="chip" onclick="put(this,'أتم الواجب بنجاح')">✅ حل الواجب</span>
+                            <span class="chip" onclick="put(this,'لم يحل الواجب')">❌ لم يحل</span>
+                            <span class="chip" onclick="put(this,'مشاغب بالحصة')">🗣️ مشاغب</span>
+                        </div>
+                        <textarea class="msg-area" placeholder="اكتب ملاحظة إضافية هنا..."></textarea>
                     </div>
-                    <textarea class="msg-area" placeholder="اكتب ملاحظة إضافية هنا..."></textarea>
-                </div>
 
-                <div style="margin-top:12px;">
-                    <button class="btn-action save-btn" onclick="send('${key}',this)" style="width:100%">حفظ وإرسال التقرير</button>
-                    <div class="sent-badge">✓ تم الإرسال والرصد بنجاح</div>
+                    <div style="margin-top:12px;">
+                        <button class="btn-action save-btn" onclick="send('${key}',this)" style="width:100%">حفظ وإرسال التقرير</button>
+                    </div>
                 </div>
+                <div class="sent-badge" id="badge_${key}">✓ تم الإرسال والرصد بنجاح</div>
             </div>`;
         }
         document.getElementById('totalStds').innerText = count;
@@ -306,10 +304,28 @@ function loadStudents(){
     });
 }
 
-// تغيير إستايل وشريط لون الكارت ديناميكياً بحسب التقييم المختار لجعل الواجهة تفاعلية
+// دالة التوسيع والطي التفاعلية عند النقر على كارت الطالب
+function toggleCard(key) {
+    const card = document.getElementById('card_' + key);
+    
+    // إذا كانت البطاقة تم رصدها وحفظها مسبقاً، لا تفتحها
+    if(card.classList.contains('row-dim')) return;
+
+    const isExpanded = card.classList.contains('expanded');
+    
+    // إغلاق أي كارت آخر مفتوح ليبقى التركيز على طالب واحد (اختياري، يسهل التصفح)
+    document.querySelectorAll('.student-card').forEach(c => c.classList.remove('expanded'));
+    
+    // فتح أو إغلاق الكارت الحالي
+    if (!isExpanded) {
+        card.classList.add('expanded');
+    }
+}
+
 function updateCardStyle(key, value) {
     const card = document.getElementById('card_' + key);
-    card.className = "student-card"; 
+    // إزالة ألوان الحالات القديمة مع الحفاظ على كونه ممتداً (expanded)
+    card.className = "student-card expanded"; 
     if(value) card.classList.add('card-' + value);
     updateStats();
 }
@@ -356,7 +372,6 @@ function applyBulk(){
     document.querySelectorAll('.hw-inp').forEach(i => i.value = val);
 }
 
-// رصد وإرسال بيانات الطالب منفصلاً للفايربيس
 function send(stdKey, btn){
     const row = btn.closest('.student-card');
     const data = {
@@ -372,15 +387,16 @@ function send(stdKey, btn){
     
     const cls = document.getElementById('selCls').value;
     database.ref('evaluations/' + cls + '/' + stdKey).push(data).then(()=>{
-        btn.style.display = 'none';
-        row.querySelector('.sent-badge').style.display = 'block';
+        row.classList.remove('expanded');
+        row.querySelector('.card-details').style.display = 'none';
+        document.getElementById('badge_' + stdKey).style.display = 'block';
         row.classList.add('row-dim');
         notify();
     });
 }
 
-// حفظ ورصد الجميع
 function sendAll(){
+    // فتح الكروت غير المرصودة برمجياً لمحاكاة ضغط زر الحفظ داخلها
     document.querySelectorAll('.student-card:not(.row-dim) .save-btn').forEach(btn => btn.click());
 }
 
@@ -391,7 +407,6 @@ function notify(){
     document.getElementById('totalSent').innerText = parseInt(document.getElementById('totalSent').innerText) + 1;
 }
 
-// ميزة البحث الذكي المطورة للكروت
 function doSearch(){
     let v = document.getElementById('searchInp').value.toLowerCase();
     document.querySelectorAll('.student-card').forEach(card => {
@@ -400,7 +415,6 @@ function doSearch(){
     });
 }
 
-// فتح قائمة الطلاب المبوبين في نافذة منبثقة ممتازة للجوال
 function showStudentsList(type){
     let list = [];
     document.querySelectorAll('.student-card').forEach(row => {
@@ -421,7 +435,6 @@ function showStudentsList(type){
 
 function closePopup(){ document.getElementById('studentsPopup').style.display = 'none'; }
 
-// كود تفعيل الـ Service Worker داخلياً ليعمل كتطبيق ويب تقدمي أونلاين دون الحاجة لملفات خارجية
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
         navigator.serviceWorker.register('data:text/javascript,self.addEventListener("fetch", function(e){})');
