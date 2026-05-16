@@ -2,140 +2,176 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>بوابة المعلم الرقمية - النسخة المطورة</title>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>بوابة المعلم الرقمية - نسخة الهاتف</title>
+    
+    <!-- تعريف التطبيق للهواتف PWA -->
+    <meta name="theme-color" content="#4f46e5">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="manifest" href="data:application/manifest+json,{%22name%22:%22%D8%A8%D9%81%D9%88%D8%A7%D8%A8%D8%A9%20%D8%A7%D9%84%D9%85%D8%B9%D9%84%D9%85%22,%22short_name%22:%22%D8%A7%D9%84%D9%85%D8%B9%D9%84%D9%85%22,%22start_url%22:%22.%22,%22display%22:%22standalone%22,%22background_color%22:%22%23eef2ff%22,%22theme_color%22:%22%234f46e5%22}">
+
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
     <style>
         :root {
-            --bg:#eef2ff; --card:rgba(255,255,255,0.65); --primary:#4f46e5;
-            --secondary:#8b5cf6; --dark:#1e293b; --muted:#64748b; --border:rgba(255,255,255,0.4);
-            --shadow1:8px 8px 18px rgba(174,174,192,0.35); --shadow2:-8px -8px 18px rgba(255,255,255,0.95);
-            --exc-bg:#dcfce7; --exc-txt:#15803d; --cre-bg:#ede9fe; --cre-txt:#7c3aed;
-            --vg-bg:#dbeafe; --vg-txt:#2563eb; --fa-bg:#fef3c7; --fa-txt:#d97706; --we-bg:#fee2e2; --we-txt:#dc2626;
+            --bg: #f8fafc;
+            --primary: #4f46e5;
+            --secondary: #8b5cf6;
+            --dark: #0f172a;
+            --muted: #64748b;
+            --surface: #ffffff;
+            
+            /* ألوان الحالات والتقييمات */
+            --exc-bg: #dcfce7; --exc-txt: #166534;
+            --cre-bg: #f3e8ff; --cre-txt: #6b21a8;
+            --vg-bg: #dbeafe; --vg-txt: #1e40af;
+            --fa-bg: #fef3c7; --fa-txt: #92400e;
+            --we-bg: #fee2e2; --we-txt: #991b1b;
         }
 
-        *{ box-sizing:border-box; }
-        body{ margin:0; font-family:'Cairo',sans-serif; background:linear-gradient(135deg,#eef2ff,#dbeafe,#ede9fe); min-height:100vh; color:var(--dark); }
+        * { box-sizing: border-box; font-family: 'Cairo', sans-serif; -webkit-tap-highlight-color: transparent; }
+        body { margin: 0; background: #f1f5f9; color: var(--dark); padding-bottom: 30px; min-height: 100vh; }
 
-        #loginPage{ position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:linear-gradient(135deg,#4f46e5,#8b5cf6); z-index:9999; }
-        .login-card{ width:90%; max-width:420px; background:rgba(255,255,255,0.18); backdrop-filter:blur(25px); border:1px solid rgba(255,255,255,0.25); border-radius:35px; padding:45px; text-align:center; box-shadow:0 25px 50px rgba(0,0,0,0.25); color:white; }
+        /* شاشة الدخول المطورّة للجوال */
+        #loginPage { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, var(--primary), var(--secondary)); z-index: 9999; padding: 20px; }
+        .login-card { width: 100%; max-width: 400px; background: rgba(255, 255, 255, 0.95); border-radius: 24px; padding: 35px 25px; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.2); }
+        .login-card h2 { margin: 0 0 25px; color: var(--dark); font-weight: 900; font-size: 24px; }
 
-        .navbar{ margin:18px; padding:18px 30px; border-radius:30px; background:rgba(255,255,255,0.55); backdrop-filter:blur(18px); border:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; box-shadow:var(--shadow1),var(--shadow2); position:sticky; top:10px; z-index:1000; }
-        .logo-box{ width:50px; height:50px; border-radius:15px; display:flex; align-items:center; justify-content:center; font-weight:900; background:linear-gradient(135deg,var(--primary),var(--secondary)); color:white; }
+        /* الهيدر العشبي المريح للعين */
+        .navbar { background: var(--surface); padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); position: sticky; top: 0; z-index: 1000; }
+        .logo-box { width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: 900; background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; font-size: 18px; }
 
-        .container{ max-width:1600px; margin:auto; padding:10px 20px 40px; }
-        .stats-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:15px; margin-bottom:30px; }
-        .stat-card{ background:rgba(255,255,255,0.6); backdrop-filter:blur(18px); border-radius:25px; padding:20px; border:1px solid var(--border); box-shadow:var(--shadow1),var(--shadow2); transition:0.3s; cursor:pointer; }
-        .stat-card:hover{ transform:translateY(-5px); background:rgba(255,255,255,0.8); }
-        .stat-card h4{ margin:0; color:var(--muted); font-size:12px; }
-        .stat-card p{ margin:10px 0 0; font-size:28px; font-weight:900; color:var(--primary); }
+        .container { padding: 15px; max-width: 800px; margin: auto; }
 
-        .control-panel{ background:rgba(255,255,255,0.55); backdrop-filter:blur(18px); border-radius:30px; padding:25px; border:1px solid var(--border); display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:18px; align-items:end; box-shadow:var(--shadow1),var(--shadow2); margin-bottom:30px; }
-        .inp{ width:100%; padding:12px; border:none; border-radius:15px; font-family:'Cairo'; font-weight:700; background:rgba(255,255,255,0.75); outline:none; box-shadow:inset 2px 2px 5px rgba(0,0,0,0.05); }
-        .btn-action{ border:none; border-radius:15px; padding:12px 20px; background:linear-gradient(135deg,var(--primary),var(--secondary)); color:white; font-weight:800; cursor:pointer; transition:0.3s; font-family:'Cairo'; }
+        /* شبكة الإحصائيات المرنة للتمرير الأفقي السريع في الجوال */
+        .stats-container { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 20px; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; }
+        .stat-card { flex: 0 0 130px; scroll-snap-align: start; background: var(--surface); border-radius: 16px; padding: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); border: 1px solid #e2e8f0; text-align: center; transition: 0.2s; cursor: pointer; }
+        .stat-card h4 { margin: 0; color: var(--muted); font-size: 11px; font-weight: 700; }
+        .stat-card p { margin: 6px 0 0; font-size: 22px; font-weight: 900; color: var(--primary); }
+
+        /* لوحة التحكم */
+        .control-panel { background: var(--surface); border-radius: 20px; padding: 15px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 20px; display: flex; flex-direction: column; gap: 12px; }
+        .form-group { display: flex; flex-direction: column; gap: 4px; }
+        .form-group label { font-size: 12px; font-weight: 700; color: var(--muted); }
         
-        .table-card{ overflow:auto; border-radius:30px; background:rgba(255,255,255,0.55); backdrop-filter:blur(18px); border:1px solid var(--border); box-shadow:var(--shadow1),var(--shadow2); }
-        table{ width:100%; border-collapse:collapse; min-width:1100px; }
-        th{ background:rgba(255,255,255,0.65); padding:15px; text-align:right; font-size:13px; color:var(--muted); }
-        td{ padding:15px; border-top:1px solid rgba(255,255,255,0.2); }
-
-        .lvl-exc{background:var(--exc-bg);color:var(--exc-txt);}
-        .lvl-cre{background:var(--cre-bg);color:var(--cre-txt);}
-        .lvl-vg{background:var(--vg-bg);color:var(--vg-txt);}
-        .lvl-fa{background:var(--fa-bg);color:var(--fa-txt);}
-        .lvl-we{background:var(--we-bg);color:var(--we-txt);}
-
-        .chips-container{ display:flex; flex-wrap:wrap; gap:5px; margin-bottom:8px; }
-        .chip{ padding:5px 10px; border-radius:10px; background:white; font-size:11px; font-weight:700; cursor:pointer; border:1px solid #ddd; transition: 0.2s; }
-        .chip:hover{ background: #f0f0f0; }
-        .msg-area{ width:100%; min-height:60px; border-radius:15px; border:none; padding:10px; font-family:'Cairo'; background:rgba(255,255,255,0.8); }
+        .inp { width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 12px; font-size: 14px; font-weight: 600; background: #f8fafc; outline: none; transition: 0.2s; }
+        .inp:focus { border-color: var(--primary); background: #fff; }
         
-        .sent-badge{ display:none; background:var(--exc-bg); color:var(--exc-txt); border-radius:12px; padding:8px; font-weight:900; text-align:center; }
-        .row-dim{ opacity:0.5; pointer-events:none; }
+        .btn-action { border: none; border-radius: 12px; padding: 12px 20px; background: linear-gradient(135deg,var(--primary),var(--secondary)); color: white; font-weight: 700; cursor: pointer; transition: 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+        .btn-action:active { transform: scale(0.98); }
 
-        #studentsPopup{ position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:5000; display:none; align-items:center; justify-content:center; }
-        .popup-content{ width:90%; max-width:500px; background:white; border-radius:30px; padding:30px; max-height:80vh; overflow-y:auto; }
+        /* حاوية الطلاب: تحويل الجدول لبطاقات (Cards) لتناسب الجوال بنسبة 100% */
+        .student-cards-list { display: flex; flex-direction: column; gap: 15px; }
+        .student-card { background: var(--surface); border-radius: 20px; padding: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02); border: 1px solid #e2e8f0; transition: 0.3s; position: relative; }
+        
+        .student-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px dashed #f1f5f9; padding-bottom: 8px; }
+        .std-name { font-weight: 900; font-size: 16px; color: var(--dark); }
 
-        #notification{ position:fixed; top:20px; left:50%; transform:translateX(-50%); background:var(--primary); color:white; padding:12px 30px; border-radius:30px; font-weight:800; display:none; z-index:6000; }
+        .card-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+
+        /* الكبسولات السريعة للملاحظات */
+        .chips-container { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+        .chip { padding: 6px 10px; border-radius: 8px; background: #f1f5f9; font-size: 11px; font-weight: 700; cursor: pointer; transition: 0.2s; border: 1px solid transparent; }
+        .chip:active, .chip.selected { background: #e0e7ff; border-color: var(--primary); color: var(--primary); }
+
+        .msg-area { width: 100%; min-height: 50px; border-radius: 10px; border: 1px solid #e2e8f0; padding: 10px; font-size: 13px; background: #f8fafc; resize: none; }
+
+        /* حالات البطاقة عند الحفظ */
+        .sent-badge { display: none; background: var(--exc-bg); color: var(--exc-txt); border-radius: 10px; padding: 10px; font-weight: 900; text-align: center; font-size: 14px; width: 100%; }
+        .row-dim { opacity: 0.4; pointer-events: none; transform: scale(0.98); }
+
+        /* الألوان الديناميكية للبطاقة حسب التقييم */
+        .card-exc { border-right: 6px solid #22c55e; }
+        .card-cre { border-right: 6px solid #a855f7; }
+        .card-vg { border-right: 6px solid #3b82f6; }
+        .card-fa { border-right: 6px solid #eab308; }
+        .card-we { border-right: 6px solid #ef4444; }
+
+        /* النوافذ المنبثقة والإشعارات */
+        #notification { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--dark); color: white; padding: 12px 24px; border-radius: 50px; font-weight: 700; display: none; z-index: 6000; box-shadow: 0 10px 25px rgba(0,0,0,0.2); font-size: 14px; }
+        #studentsPopup { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 5000; display: none; align-items: center; justify-content: center; padding: 20px; }
+        .popup-content { width: 100%; max-width: 400px; background: white; border-radius: 24px; padding: 20px; max-height: 75vh; overflow-y: auto; }
     </style>
 </head>
 <body>
 
+<!-- شاشة الدخول -->
 <div id="loginPage">
     <div class="login-card">
-        <div class="logo-box" style="margin:0 auto 20px">أ</div>
-        <h2>بوابة المعلمين</h2>
-        <input type="text" id="userInp" class="inp" placeholder="اسم المستخدم" style="margin-bottom:15px">
-        <input type="password" id="passInp" class="inp" placeholder="كلمة المرور" style="margin-bottom:20px">
-        <button class="btn-action" style="width:100%" onclick="checkAuth()">دخول للنظام</button>
-        <p id="errorMsg" style="display:none;color:#fee2e2;margin-top:15px">بيانات الدخول غير صحيحة</p>
+        <div class="logo-box" style="margin:0 auto 15px">أ</div>
+        <h2>بوابة المعلم الرقمية</h2>
+        <input type="text" id="userInp" class="inp" placeholder="اسم المستخدم" style="margin-bottom:12px">
+        <input type="password" id="passInp" class="inp" placeholder="كلمة المرور" style="margin-bottom:18px">
+        <button class="btn-action" style="width:100%" onclick="checkAuth()">تسجيل الدخول</button>
+        <p id="errorMsg" style="display:none; color:#ef4444; margin-top:12px; font-size:14px; font-weight:700;">بيانات الدخول غير صحيحة</p>
     </div>
 </div>
 
-<div id="notification">تم الحفظ بنجاح</div>
+<!-- الإشعارات السريعة -->
+<div id="notification">تم الحفظ بنجاح ✓</div>
 
+<!-- نافذة عرض الطلاب التفصيلية -->
 <div id="studentsPopup">
     <div class="popup-content">
-        <h2 id="popupTitle">القائمة</h2>
-        <div id="popupStudents"></div>
-        <button class="btn-action" onclick="closePopup()" style="width:100%; margin-top:20px">إغلاق</button>
+        <h3 id="popupTitle" style="margin-top:0; font-weight:900;">القائمة</h3>
+        <div id="popupStudents" style="max-height: 250px; overflow-y:auto;"></div>
+        <button class="btn-action" onclick="closePopup()" style="width:100%; margin-top:15px; background:#64748b;">إغلاق</button>
     </div>
 </div>
 
+<!-- البار العلوي -->
 <nav class="navbar">
-    <div class="logo-section" style="display:flex; gap:15px; align-items:center;">
+    <div style="display:flex; gap:10px; align-items:center;">
         <div class="logo-box">أ</div>
-        <div><h2 style="margin:0;font-size:18px">بوابة المعلم الرقمية</h2></div>
+        <div><h2 style="margin:0; font-size:16px; font-weight:900;">بوابة المعلم</h2></div>
     </div>
-    <div class="teacher-info">
-        <span id="displaySubj" style="display:block; font-size:12px; color:var(--muted)"></span>
-        <strong id="displayTeacher"></strong>
+    <div style="text-align: left;">
+        <strong id="displayTeacher" style="font-size:14px; display:block;"></strong>
+        <span id="displaySubj" style="font-size:11px; color:var(--muted)"></span>
     </div>
 </nav>
 
 <div class="container">
-    <div class="stats-grid">
+    <!-- شريط الإحصائيات (أفقي وسريع التصفح باللمس) -->
+    <div class="stats-container">
         <div class="stat-card"><h4>إجمالي الطلاب</h4><p id="totalStds">0</p></div>
         <div class="stat-card"><h4>رُصد اليوم</h4><p id="totalSent">0</p></div>
-        <div class="stat-card" onclick="showStudentsList('exc')"><h4>المتميزون</h4><p id="excCount">0</p></div>
-        <div class="stat-card" onclick="showStudentsList('we')"><h4>الطلاب الضعاف</h4><p id="weakCount">0</p></div>
-        <div class="stat-card" onclick="showStudentsList('gold')"><h4>الميداليات الذهبية</h4><p id="goldCount">0</p></div>
-        <div class="stat-card" onclick="showStudentsList('silver')"><h4>الميداليات الفضية</h4><p id="silverCount">0</p></div>
-        <div class="stat-card" onclick="showStudentsList('bronze')"><h4>الميداليات البرونزية</h4><p id="bronzeCount">0</p></div>
-        <div class="stat-card"><h4>آخر تسجيل دخول</h4><p id="lastLogin" style="font-size:16px">-</p></div>
+        <div class="stat-card" onclick="showStudentsList('exc')"><h4>المتميزون ✨</h4><p id="excCount">0</p></div>
+        <div class="stat-card" onclick="showStudentsList('we')"><h4>الضعاف ⚠️</h4><p id="weakCount">0</p></div>
+        <div class="stat-card" onclick="showStudentsList('gold')"><h4>🥇 ذهبية</h4><p id="goldCount">0</p></div>
+        <div class="stat-card" onclick="showStudentsList('silver')"><h4>🥈 فضية</h4><p id="silverCount">0</p></div>
+        <div class="stat-card" onclick="showStudentsList('bronze')"><h4>🥉 برونزية</h4><p id="bronzeCount">0</p></div>
     </div>
 
+    <!-- لوحة التحكم الذكية -->
     <div class="control-panel">
-        <div><label>الفصل</label><select id="selCls" class="inp" onchange="loadStudents()"></select></div>
-        <div><label>البحث</label><input type="text" id="searchInp" class="inp" placeholder="ابحث عن طالب..." onkeyup="doSearch()"></div>
-        <div><label>تعميم الواجب</label><input type="text" id="bulkHw" class="inp" placeholder="مثلاً: صـ 50"></div>
-        <div style="display:flex; gap:10px">
-            <button class="btn-action" onclick="applyBulk()">تطبيق</button>
-            <button class="btn-action" onclick="sendAll()" style="background:var(--dark)">إرسال للكل</button>
+        <div class="form-group">
+            <label>الفصل الدراسي</label>
+            <select id="selCls" class="inp" onchange="loadStudents()"></select>
         </div>
+        <div class="form-group">
+            <label>بحث سريع</label>
+            <input type="text" id="searchInp" class="inp" placeholder="ابحث باسم الطالب..." onkeyup="doSearch()">
+        </div>
+        <div class="form-group">
+            <label>تعميم واجب محدد للكل</label>
+            <div style="display:flex; gap:8px;">
+                <input type="text" id="bulkHw" class="inp" placeholder="مثال: صـ 45">
+                <button class="btn-action" onclick="applyBulk()">تطبيق</button>
+            </div>
+        </div>
+        <button class="btn-action" onclick="sendAll()" style="background:var(--dark); width:100%; margin-top:5px;">إرسال ورصد للجميع دفعة واحدة</button>
     </div>
 
-    <div class="table-card">
-        <table>
-            <thead>
-                <tr>
-                    <th>الطالب</th>
-                    <th width="150">التقييم</th>
-                    <th width="100">الواجب</th>
-                    <th width="180">الجوائز/الإجراءات</th>
-                    <th>الملاحظات</th>
-                    <th width="100">الإجراء</th>
-                </tr>
-            </thead>
-            <tbody id="studentsBody"></tbody>
-        </table>
-    </div>
+    <!-- قائمة الطلاب (تحولت بالكامل إلى نظام كروت مخصص للهاتف) -->
+    <div class="student-cards-list" id="studentsContainer"></div>
 </div>
 
 <script>
+// إعدادات الفايربيس الأساسية
 const firebaseConfig = {
     apiKey: "AIzaSyCIW17B6y6sG_bdUFqF7FWoVIY9ynXv1B4",
     authDomain: "myschoolproject-4ad92.firebaseapp.com",
@@ -149,12 +185,15 @@ const database = firebase.database();
 let loggedInTeacher = null;
 let currentSubject = "";
 
+// تسجيل الدخول والتحقق الديناميكي
 function checkAuth(){
-    const u = document.getElementById('userInp').value;
-    const p = document.getElementById('passInp').value;
+    const u = document.getElementById('userInp').value.trim();
+    const p = document.getElementById('passInp').value.trim();
+    
     database.ref('assignments').once('value', snapshot=>{
         const data = snapshot.val();
         let found = false;
+        
         for(let key in data){
             if(data[key].teacherUser === u && data[key].teacherPass.toString() === p){
                 loggedInTeacher = data[key];
@@ -170,80 +209,116 @@ function checkAuth(){
     });
 }
 
+// بناء الجلسة ودعم الفصول المتعددة
 function startSession(){
     document.getElementById('displayTeacher').innerText = loggedInTeacher.teacherName;
     document.getElementById('displaySubj').innerText = 'مادة: ' + loggedInTeacher.subject;
-    document.getElementById('lastLogin').innerText = new Date().toLocaleTimeString('ar-SA');
     currentSubject = loggedInTeacher.subject;
+    
     const sel = document.getElementById('selCls');
-    sel.innerHTML = `<option value="${loggedInTeacher.className}">${loggedInTeacher.className}</option>`;
+    sel.innerHTML = '';
+    
+    // إذا كان الحساب يحتوي على فصول متعددة مفصولة بفاصلة أو فصل واحد
+    const classes = loggedInTeacher.className.split(',');
+    classes.forEach(cls => {
+        sel.innerHTML += `<option value="${cls.trim()}">${cls.trim()}</option>`;
+    });
+    
     loadStudents();
 }
 
+// جلب الطلاب وعرضهم على هيئة كروت متجاوبة مع اللمس والجوال
 function loadStudents(){
     const cls = document.getElementById('selCls').value;
     database.ref('students/' + cls).on('value', snapshot=>{
         const students = snapshot.val();
-        const tbody = document.getElementById('studentsBody');
-        tbody.innerHTML = '';
+        const container = document.getElementById('studentsContainer');
+        container.innerHTML = '';
         let count = 0;
+        
         for(let key in students){
             count++;
             const s = students[key];
-            tbody.innerHTML += `
-            <tr data-key="${key}">
-                <td>
-                    <div class="std-name" style="font-weight:800">${s.name}</div>
-                    <div style="font-size:10px; color:var(--muted)">${currentSubject}</div>
-                </td>
-                <td>
-                    <select class="inp rank-sel" onchange="updateStats(); this.className='inp rank-sel lvl='+this.value">
-                        <option value="">اختر التقييم</option>
-                        <option value="exc">متميز ✨</option>
-                        <option value="cre">مبدع 🎨</option>
-                        <option value="vg">جيد جداً 👍</option>
-                        <option value="fa">مقبول 🆗</option>
-                        <option value="we">ضعيف ⚠️</option>
-                    </select>
-                </td>
-                <td><input type="text" class="inp hw-inp" placeholder="صـ"></td>
-                <td>
-                    <select class="inp award-sel" onchange="updateAwards()" style="margin-bottom:5px">
-                        <option value="">🏆 الجائزة</option>
-                        <option value="gold">🥇 ذهبية</option>
-                        <option value="silver">🥈 فضية</option>
-                        <option value="bronze">🥉 برونزية</option>
-                    </select>
-                    <select class="inp warning-sel">
-                        <option value="">⚠️ الإجراء</option>
-                        <option value="yellow">🟨 انذار أول</option>
-                        <option value="red">🟥 انذار أخير</option>
-                        <option value="warning">📌 خصم درجة</option>
-                    </select>
-                </td>
-                <td>
+            container.innerHTML += `
+            <div class="student-card" data-key="${key}" id="card_${key}">
+                <div class="student-header">
+                    <div>
+                        <div class="std-name">${s.name}</div>
+                        <div style="font-size:10px; color:var(--muted)">${currentSubject}</div>
+                    </div>
+                </div>
+                
+                <div class="card-row">
+                    <div>
+                        <label style="font-size:11px; font-weight:700; color:var(--muted)">التقييم</label>
+                        <select class="inp rank-sel" onchange="updateCardStyle('${key}', this.value)">
+                            <option value="">اختر التقييم</option>
+                            <option value="exc">متميز ✨</option>
+                            <option value="cre">مبدع 🎨</option>
+                            <option value="vg">جيد جداً 👍</option>
+                            <option value="fa">مقبول 🆗</option>
+                            <option value="we">ضعيف ⚠️</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size:11px; font-weight:700; color:var(--muted)">الواجب الدراسي</label>
+                        <input type="text" class="inp hw-inp" placeholder="صـ">
+                    </div>
+                </div>
+
+                <div class="card-row">
+                    <div>
+                        <select class="inp award-sel" onchange="updateAwards()">
+                            <option value="">🏆 الجائزة</option>
+                            <option value="gold">🥇 ذهبية</option>
+                            <option value="silver">🥈 فضية</option>
+                            <option value="bronze">🥉 برونزية</option>
+                        </select>
+                    </div>
+                    <div>
+                        <select class="inp warning-sel">
+                            <option value="">⚠️ الإجراء</option>
+                            <option value="yellow">🟨 انذار أول</option>
+                            <option value="red">🟥 انذار أخير</option>
+                            <option value="warning">📌 خصم درجة</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
                     <div class="chips-container">
                         <span class="chip" onclick="put(this,'تفاعل مميز اليوم')">👏 مشاركة</span>
                         <span class="chip" onclick="put(this,'أتم الواجب بنجاح')">✅ حل الواجب</span>
                         <span class="chip" onclick="put(this,'لم يحل الواجب')">❌ لم يحل</span>
-                        <span class="chip" onclick="put(this,'نايم في الحصة')">💤 نايم</span>
-                        <span class="chip" onclick="put(this,'لم يحضر الكتاب')">📕 كتاب</span>
-                        <span class="chip" onclick="put(this,'يتحدث أثناء الشرح')">🗣️ يتحدث</span>
+                        <span class="chip" onclick="put(this,'مشاغب بالحصة')">🗣️ مشاغب</span>
                     </div>
-                    <textarea class="msg-area" placeholder="ملاحظة إضافية..."></textarea>
-                </td>
-                <td>
-                    <button class="btn-action" onclick="send('${key}',this)">حفظ</button>
-                    <div class="sent-badge">تم</div>
-                </td>
-            </tr>`;
+                    <textarea class="msg-area" placeholder="اكتب ملاحظة إضافية هنا..."></textarea>
+                </div>
+
+                <div style="margin-top:12px;">
+                    <button class="btn-action save-btn" onclick="send('${key}',this)" style="width:100%">حفظ وإرسال التقرير</button>
+                    <div class="sent-badge">✓ تم الإرسال والرصد بنجاح</div>
+                </div>
+            </div>`;
         }
         document.getElementById('totalStds').innerText = count;
+        resetStats();
     });
 }
 
+// تغيير إستايل وشريط لون الكارت ديناميكياً بحسب التقييم المختار لجعل الواجهة تفاعلية
+function updateCardStyle(key, value) {
+    const card = document.getElementById('card_' + key);
+    card.className = "student-card"; 
+    if(value) card.classList.add('card-' + value);
+    updateStats();
+}
+
 function put(chip, txt){
-    chip.closest('tr').querySelector('.msg-area').value = txt;
+    const row = chip.closest('.student-card');
+    row.querySelector('.msg-area').value = txt;
+    row.querySelectorAll('.chip').forEach(c => c.classList.remove('selected'));
+    chip.classList.add('selected');
 }
 
 function updateStats(){
@@ -268,13 +343,22 @@ function updateAwards(){
     document.getElementById('bronzeCount').innerText = b;
 }
 
+function resetStats() {
+    document.getElementById('weakCount').innerText = 0;
+    document.getElementById('excCount').innerText = 0;
+    document.getElementById('goldCount').innerText = 0;
+    document.getElementById('silverCount').innerText = 0;
+    document.getElementById('bronzeCount').innerText = 0;
+}
+
 function applyBulk(){
     const val = document.getElementById('bulkHw').value;
     document.querySelectorAll('.hw-inp').forEach(i => i.value = val);
 }
 
+// رصد وإرسال بيانات الطالب منفصلاً للفايربيس
 function send(stdKey, btn){
-    const row = btn.closest('tr');
+    const row = btn.closest('.student-card');
     const data = {
         date: new Date().toLocaleDateString('ar-SA'),
         time: new Date().toLocaleTimeString('ar-SA'),
@@ -285,7 +369,9 @@ function send(stdKey, btn){
         message: row.querySelector('.msg-area').value,
         subject: currentSubject
     };
-    database.ref('evaluations/' + loggedInTeacher.className + '/' + stdKey).push(data).then(()=>{
+    
+    const cls = document.getElementById('selCls').value;
+    database.ref('evaluations/' + cls + '/' + stdKey).push(data).then(()=>{
         btn.style.display = 'none';
         row.querySelector('.sent-badge').style.display = 'block';
         row.classList.add('row-dim');
@@ -293,27 +379,31 @@ function send(stdKey, btn){
     });
 }
 
+// حفظ ورصد الجميع
 function sendAll(){
-    document.querySelectorAll('#studentsBody tr:not(.row-dim) .btn-action').forEach(btn => btn.click());
+    document.querySelectorAll('.student-card:not(.row-dim) .save-btn').forEach(btn => btn.click());
 }
 
 function notify(){
     const n = document.getElementById('notification');
     n.style.display = 'block';
-    setTimeout(() => n.style.display = 'none', 2500);
+    setTimeout(() => n.style.display = 'none', 2000);
     document.getElementById('totalSent').innerText = parseInt(document.getElementById('totalSent').innerText) + 1;
 }
 
+// ميزة البحث الذكي المطورة للكروت
 function doSearch(){
     let v = document.getElementById('searchInp').value.toLowerCase();
-    document.querySelectorAll('#studentsBody tr').forEach(r => {
-        r.style.display = r.innerText.toLowerCase().includes(v) ? '' : 'none';
+    document.querySelectorAll('.student-card').forEach(card => {
+        const name = card.querySelector('.std-name').innerText.toLowerCase();
+        card.style.display = name.includes(v) ? '' : 'none';
     });
 }
 
+// فتح قائمة الطلاب المبوبين في نافذة منبثقة ممتازة للجوال
 function showStudentsList(type){
     let list = [];
-    document.querySelectorAll('#studentsBody tr').forEach(row => {
+    document.querySelectorAll('.student-card').forEach(row => {
         const name = row.querySelector('.std-name').innerText;
         const lvl = row.querySelector('.rank-sel').value;
         const awd = row.querySelector('.award-sel').value;
@@ -323,12 +413,20 @@ function showStudentsList(type){
         if(type === 'silver' && awd === 'silver') list.push(name);
         if(type === 'bronze' && awd === 'bronze') list.push(name);
     });
-    document.getElementById('popupTitle').innerText = "قائمة الطلاب";
-    document.getElementById('popupStudents').innerHTML = list.length ? list.map(n => `<div style="padding:10px; border-bottom:1px solid #eee">${n}</div>`).join('') : "لا يوجد طلاب";
+    
+    document.getElementById('popupTitle').innerText = "قائمة الطلاب المصنفين";
+    document.getElementById('popupStudents').innerHTML = list.length ? list.map(n => `<div style="padding:12px; font-weight:700; border-bottom:1px solid #f1f5f9; color:var(--dark);">${n}</div>`).join('') : "<div style='color:var(--muted); padding:15px; text-align:center;'>لا يوجد طلاب في هذه القائمة حالياً</div>";
     document.getElementById('studentsPopup').style.display = 'flex';
 }
 
 function closePopup(){ document.getElementById('studentsPopup').style.display = 'none'; }
+
+// كود تفعيل الـ Service Worker داخلياً ليعمل كتطبيق ويب تقدمي أونلاين دون الحاجة لملفات خارجية
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('data:text/javascript,self.addEventListener("fetch", function(e){})');
+    });
+}
 </script>
 </body>
 </html>
