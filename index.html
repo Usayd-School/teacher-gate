@@ -42,7 +42,6 @@
 
         .container { padding: 15px; max-width: 800px; margin: auto; }
 
-        /* مؤشر حضور وتواجد المعلم المطور */
         .attendance-tracker { background: var(--surface); border-radius: 16px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); border: 1px solid #e2e8f0; }
         .tracker-header { display: flex; justify-content: space-between; align-items: center; font-size: 13px; font-weight: 700; margin-bottom: 8px; }
         .progress-bar-bg { background: #e2e8f0; height: 10px; border-radius: 20px; overflow: hidden; position: relative; }
@@ -54,6 +53,9 @@
         .stat-card p { margin: 6px 0 0; font-size: 22px; font-weight: 900; color: var(--primary); }
 
         .control-panel { background: var(--surface); border-radius: 20px; padding: 15px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 20px; display: flex; flex-direction: column; gap: 12px; }
+        
+        /* تصميم منسق لفرز الفصول والصفوف جنباً إلى جنب هاتفياً */
+        .class-selector-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         .form-group { display: flex; flex-direction: column; gap: 4px; }
         .form-group label { font-size: 12px; font-weight: 700; color: var(--muted); }
         
@@ -63,7 +65,6 @@
         .btn-action { border: none; border-radius: 12px; padding: 12px 18px; background: linear-gradient(135deg,var(--primary),var(--secondary)); color: white; font-weight: 700; cursor: pointer; transition: 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 14px; }
         .btn-action:active { transform: scale(0.98); }
 
-        /* منطقة الأزرار المحدثة مع الرفع */
         .action-group-grid { display: grid; grid-template-columns: 1fr auto; gap: 10px; margin-top: 5px; }
         .btn-file-label { background: #f1f5f9; border: 2px dashed #cbd5e1; color: var(--dark); padding: 12px; border-radius: 12px; font-weight: 700; font-size: 13px; text-align: center; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; }
         .btn-file-label.loaded { background: var(--exc-bg); color: var(--exc-txt); border-color: #22c55e; }
@@ -136,7 +137,6 @@
 </nav>
 
 <div class="container">
-    <!-- مؤشر متابعة حضور ورصد المعلم اليومي الجديد -->
     <div class="attendance-tracker">
         <div class="tracker-header">
             <span style="color: var(--dark)">📡 حالة رصد وتواجد المعلم اليوم:</span>
@@ -158,10 +158,18 @@
     </div>
 
     <div class="control-panel">
-        <div class="form-group">
-            <label>الفصل الدراسي</label>
-            <select id="selCls" class="inp" onchange="loadStudents()"></select>
+        <!-- تحديث: هيكلة الاختيار المزدوج (الصف ثم الفصل) لتسهيل التدريس والاسناد المتعدد -->
+        <div class="class-selector-grid">
+            <div class="form-group">
+                <label>الصف الدراسي</label>
+                <select id="selGrade" class="inp" onchange="handleGradeChange()"></select>
+            </div>
+            <div class="form-group">
+                <label>الفصل / الشعبة</label>
+                <select id="selClassroom" class="inp" onchange="loadStudents()"></select>
+            </div>
         </div>
+
         <div class="form-group">
             <label>بحث سريع</label>
             <input type="text" id="searchInp" class="inp" placeholder="ابحث باسم الطالب..." onkeyup="doSearch()">
@@ -174,7 +182,6 @@
             </div>
         </div>
         
-        <!-- تعديل الهيكلة لإضافة رفع الملف بجانب زر الإرسال للكل مباشرة كطلبك -->
         <div class="action-group-grid">
             <button class="btn-action" onclick="sendAll()" style="background:var(--dark);">إرسال للكل ورصد الفصل</button>
             
@@ -201,7 +208,8 @@ const database = firebase.database();
 
 let loggedInTeacher = null;
 let currentSubject = "";
-let attachedFileBase64 = ""; // لتخزين ملف ورقة العمل المرفق
+let attachedFileBase64 = "";
+let structuredGrades = {}; // لتخزين البنية المفككة: الصفوف وتحتها الفصول التابعة لها
 
 function checkAuth(){
     const u = document.getElementById('userInp').value.trim();
@@ -231,18 +239,70 @@ function startSession(){
     document.getElementById('displaySubj').innerText = 'مادة: ' + loggedInTeacher.subject;
     currentSubject = loggedInTeacher.subject;
     
-    const sel = document.getElementById('selCls');
-    sel.innerHTML = '';
-    const classes = loggedInTeacher.className.split(',');
-    classes.forEach(cls => {
-        sel.innerHTML += `<option value="${cls.trim()}">${cls.trim()}</option>`;
-    });
+    // فك وتجميع الإسناد المتعدد ديناميكياً (مثال: "ثاني أول, ثاني ثاني" أو "2أ, 2ب, 3أ")
+    structuredGrades = {};
+    const rawClasses = loggedInTeacher.className.split(',');
     
+    rawClasses.forEach(rawItem => {
+        const fullString = rawItem.trim();
+        if(!fullString) return;
+        
+        // استخراج الرقم أو الكلمة الأساسية للصف (مثال: أول حرفين أو أرقام)
+        let gradeKey = "";
+        let classroomKey = fullString;
+        
+        // منطق ذكي لاستخراج الرقم إذا كان مكتوباً مثل "2أ" أو "3ب" أو بالكلمات
+        const matchNumber = fullString.match(/\d+/);
+        if(matchNumber) {
+            gradeKey = "الصف " + matchNumber[0];
+        } else if(fullString.includes("ثاني")) {
+            gradeKey = "الصف الثاني";
+        } else if(fullString.includes("ثالث")) {
+            gradeKey = "الصف الثالث";
+        } else if(fullString.includes("أول")) {
+            gradeKey = "الصف الأول";
+        } else {
+            gradeKey = "أخرى / عام";
+        }
+
+        if(!structuredGrades[gradeKey]) {
+            structuredGrades[gradeKey] = [];
+        }
+        structuredGrades[gradeKey].push(fullString);
+    });
+
+    // تعبئة قائمة الصفوف (Grade) الأولى
+    const gradeSelect = document.getElementById('selGrade');
+    gradeSelect.innerHTML = '';
+    
+    for (let grade in structuredGrades) {
+        gradeSelect.innerHTML += `<option value="${grade}">${grade}</option>`;
+    }
+    
+    // تفعيل التحديث التتابعي للفصول التابعة لأول صف تلقائياً
+    handleGradeChange();
+}
+
+// دالة التحديث عند تغيير الصف ليقوم بملء قائمة الفصول الفعليه
+function handleGradeChange() {
+    const selectedGrade = document.getElementById('selGrade').value;
+    const classroomSelect = document.getElementById('selClassroom');
+    classroomSelect.innerHTML = '';
+    
+    if(structuredGrades[selectedGrade]) {
+        structuredGrades[selectedGrade].forEach(clsRoom => {
+            classroomSelect.innerHTML += `<option value="${clsRoom}">${clsRoom}</option>`;
+        });
+    }
+    
+    // تحميل كروت الطلاب للفصل المختار مباشرة
     loadStudents();
 }
 
 function loadStudents(){
-    const cls = document.getElementById('selCls').value;
+    const cls = document.getElementById('selClassroom').value;
+    if(!cls) return;
+    
     database.ref('students/' + cls).on('value', snapshot=>{
         const students = snapshot.val();
         const container = document.getElementById('studentsContainer');
@@ -323,14 +383,13 @@ function loadStudents(){
     });
 }
 
-// دالة تفاعلية جديدة لتحويل وقراءة الملف المرفق بجانب الزر فوراً
 function handleFileSelected(input) {
     if (input.files && input.files[0]) {
         const file = input.files[0];
         const reader = new FileReader();
         
         reader.onload = function(e) {
-            attachedFileBase64 = e.target.result; // الاحتفاظ بنسخة النص المشفر للملف لارسالها
+            attachedFileBase64 = e.target.result;
             const label = document.getElementById('fileLabel');
             label.innerText = "✓ تم إرفاق: " + file.name.substring(0, 10) + "...";
             label.classList.add('loaded');
@@ -339,14 +398,12 @@ function handleFileSelected(input) {
     }
 }
 
-// دالة تحديث مؤشر الحضور والتواجد الفعلي للمعلم بشكل رقمي وبياني سريع
 function updateAttendanceIndicator() {
     const total = parseInt(document.getElementById('totalStds').innerText) || 0;
     const sent = parseInt(document.getElementById('totalSent').innerText) || 0;
     
     if (total === 0) return;
     
-    // حساب النسبة المئوية لتغطية حضور المعلم ورصده للفصل
     const percentage = Math.round((sent / total) * 100);
     const fill = document.getElementById('attendanceProgress');
     const statusText = document.getElementById('attendanceStatus');
@@ -433,10 +490,10 @@ function send(stdKey, btn){
         warning: row.querySelector('.warning-sel').value,
         message: row.querySelector('.msg-area').value,
         subject: currentSubject,
-        worksheet: attachedFileBase64 // الحاق ملف ورقة العمل في حال تم رفعه
+        worksheet: attachedFileBase64
     };
     
-    const cls = document.getElementById('selCls').value;
+    const cls = document.getElementById('selClassroom').value;
     database.ref('evaluations/' + cls + '/' + stdKey).push(data).then(()=>{
         row.classList.remove('expanded');
         row.querySelector('.card-details').style.display = 'none';
@@ -455,7 +512,7 @@ function notify(){
     n.style.display = 'block';
     setTimeout(() => n.style.display = 'none', 2000);
     document.getElementById('totalSent').innerText = parseInt(document.getElementById('totalSent').innerText) + 1;
-    updateAttendanceIndicator(); // تحديث المؤشر فور الحفظ
+    updateAttendanceIndicator();
 }
 
 function doSearch(){
