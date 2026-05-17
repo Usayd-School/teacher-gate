@@ -8,7 +8,7 @@
     <meta name="theme-color" content="#4f46e5">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="manifest" href="data:application/manifest+json,{%22name%22:%22%D8%A8%D9%81%D9%88%D8%A7%D8%A8%D8%A9%20%D8%A7%D9%84%D9%85%D8%B9%D9%84%D9%85%22,%22short_name%22:%22%D8%A7%D9%84%D9%85%D8%B9%D9%84%D9%85%22,%22start_url%22:%22.%22,%22display%22:%22standalone%22,%22background_color%22:%22%23eef2ff%22,%22theme_color%22:%22%234f46e5%22}">
+    <link rel="manifest" href="data:application/manifest+json,{%22name%22:%22%D8%A8%D9%81%D9%80%D9%88%D8%A7%D8%A8%D8%A9%20%D8%A7%D9%84%D9%85%D8%B9%D9%84%D9%85%22,%22short_name%22:%22%D8%A7%D9%84%D9%85%D8%B9%D9%84%D9%85%22,%22start_url%22:%22.%22,%22display%22:%22standalone%22,%22background_color%22:%22%23eef2ff%22,%22theme_color%22:%22%234f46e5%22}">
 
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -54,7 +54,6 @@
 
         .control-panel { background: var(--surface); border-radius: 20px; padding: 15px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 20px; display: flex; flex-direction: column; gap: 12px; }
         
-        /* تصميم منسق لفرز الفصول والصفوف جنباً إلى جنب هاتفياً */
         .class-selector-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         .form-group { display: flex; flex-direction: column; gap: 4px; }
         .form-group label { font-size: 12px; font-weight: 700; color: var(--muted); }
@@ -158,7 +157,6 @@
     </div>
 
     <div class="control-panel">
-        <!-- تحديث: هيكلة الاختيار المزدوج (الصف ثم الفصل) لتسهيل التدريس والاسناد المتعدد -->
         <div class="class-selector-grid">
             <div class="form-group">
                 <label>الصف الدراسي</label>
@@ -209,8 +207,9 @@ const database = firebase.database();
 let loggedInTeacher = null;
 let currentSubject = "";
 let attachedFileBase64 = "";
-let structuredGrades = {}; // لتخزين البنية المفككة: الصفوف وتحتها الفصول التابعة لها
+let structuredGrades = {}; 
 
+// التحديث الجوهري: حلقة تكرار ذكية للمرور على كافة الإسنادات المكررة سحابياً
 function checkAuth(){
     const u = document.getElementById('userInp').value.trim();
     const p = document.getElementById('passInp').value.trim();
@@ -218,14 +217,32 @@ function checkAuth(){
     database.ref('assignments').once('value', snapshot=>{
         const data = snapshot.val();
         let found = false;
+        let combinedClasses = [];
+        let teacherDetails = null;
         
+        // المرور على كافة الحسابات المكررة في الفايربيس وجمع فصولها معاً
         for(let key in data){
             if(data[key].teacherUser === u && data[key].teacherPass.toString() === p){
-                loggedInTeacher = data[key];
-                found = true; break;
+                teacherDetails = data[key];
+                found = true;
+                
+                // تفكيك النص في حالة كان السجل يحتوي على فصول مفصولة بفاصلة
+                let rawClasses = data[key].className.split(',');
+                rawClasses.forEach(c => {
+                    let trimmed = c.trim();
+                    if(trimmed && !combinedClasses.includes(trimmed)){
+                        combinedClasses.push(trimmed);
+                    }
+                });
             }
         }
-        if(found){
+        
+        if(found && teacherDetails){
+            // بناء كائن المعلم النهائي مضافاً إليه كافة الفصول المسندة من السطور المكررة
+            loggedInTeacher = {
+                ...teacherDetails,
+                className: combinedClasses.join(', ')
+            };
             document.getElementById('loginPage').style.display='none';
             startSession();
         } else {
@@ -239,7 +256,6 @@ function startSession(){
     document.getElementById('displaySubj').innerText = 'مادة: ' + loggedInTeacher.subject;
     currentSubject = loggedInTeacher.subject;
     
-    // فك وتجميع الإسناد المتعدد ديناميكياً (مثال: "ثاني أول, ثاني ثاني" أو "2أ, 2ب, 3أ")
     structuredGrades = {};
     const rawClasses = loggedInTeacher.className.split(',');
     
@@ -247,17 +263,13 @@ function startSession(){
         const fullString = rawItem.trim();
         if(!fullString) return;
         
-        // استخراج الرقم أو الكلمة الأساسية للصف (مثال: أول حرفين أو أرقام)
         let gradeKey = "";
-        let classroomKey = fullString;
-        
-        // منطق ذكي لاستخراج الرقم إذا كان مكتوباً مثل "2أ" أو "3ب" أو بالكلمات
         const matchNumber = fullString.match(/\d+/);
         if(matchNumber) {
             gradeKey = "الصف " + matchNumber[0];
         } else if(fullString.includes("ثاني")) {
             gradeKey = "الصف الثاني";
-        } else if(fullString.includes("ثالث")) {
+        } else if(fullString.includes("ثالع") || fullString.includes("ثالث")) {
             gradeKey = "الصف الثالث";
         } else if(fullString.includes("أول")) {
             gradeKey = "الصف الأول";
@@ -268,10 +280,11 @@ function startSession(){
         if(!structuredGrades[gradeKey]) {
             structuredGrades[gradeKey] = [];
         }
-        structuredGrades[gradeKey].push(fullString);
+        if(!structuredGrades[gradeKey].includes(fullString)){
+            structuredGrades[gradeKey].push(fullString);
+        }
     });
 
-    // تعبئة قائمة الصفوف (Grade) الأولى
     const gradeSelect = document.getElementById('selGrade');
     gradeSelect.innerHTML = '';
     
@@ -279,11 +292,9 @@ function startSession(){
         gradeSelect.innerHTML += `<option value="${grade}">${grade}</option>`;
     }
     
-    // تفعيل التحديث التتابعي للفصول التابعة لأول صف تلقائياً
     handleGradeChange();
 }
 
-// دالة التحديث عند تغيير الصف ليقوم بملء قائمة الفصول الفعليه
 function handleGradeChange() {
     const selectedGrade = document.getElementById('selGrade').value;
     const classroomSelect = document.getElementById('selClassroom');
@@ -295,7 +306,6 @@ function handleGradeChange() {
         });
     }
     
-    // تحميل كروت الطلاب للفصل المختار مباشرة
     loadStudents();
 }
 
@@ -378,6 +388,7 @@ function loadStudents(){
             </div>`;
         }
         document.getElementById('totalStds').innerText = count;
+        document.getElementById('totalSent').innerText = 0; // تصفير العداد عند تغيير الفصل
         resetStats();
         updateAttendanceIndicator();
     });
