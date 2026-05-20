@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>بوابة المعلم الرقمية - نسخة الهاتف المطورة</title>
+    <title>بوابة المعلم الرقمية - نسخة الهاتف المطورة | Taalamna 👨‍🏫</title>
     
     <meta name="theme-color" content="#4f46e5">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -103,17 +103,6 @@
 </head>
 <body>
 
-<div id="loginPage">
-    <div class="login-card">
-        <div class="logo-box" style="margin:0 auto 15px">أ</div>
-        <h2>بوابة المعلم الرقمية</h2>
-        <input type="text" id="userInp" class="inp" placeholder="اسم المستخدم" style="margin-bottom:12px">
-        <input type="password" id="passInp" class="inp" placeholder="كلمة المرور" style="margin-bottom:18px">
-        <button class="btn-action" style="width:100%" onclick="checkAuth()">تسجيل الدخول</button>
-        <p id="errorMsg" style="display:none; color:#ef4444; margin-top:12px; font-size:14px; font-weight:700;">بيانات الدخول غير صحيحة</p>
-    </div>
-</div>
-
 <div id="notification">تم الحفظ بنجاح ✓</div>
 
 <div id="studentsPopup">
@@ -124,14 +113,25 @@
     </div>
 </div>
 
+<div id="loginPage">
+    <div class="login-card">
+        <div class="logo-box" style="margin:0 auto 15px">ت</div>
+        <h2>بوابة المعلم الرقمية Taalamna</h2>
+        <input type="text" id="userInp" class="inp" placeholder="اسم المستخدم" style="margin-bottom:12px">
+        <input type="password" id="passInp" class="inp" placeholder="كلمة المرور" style="margin-bottom:18px">
+        <button class="btn-action" style="width:100%" onclick="checkAuth()">تسجيل الدخول</button>
+        <p id="errorMsg" style="display:none; color:#ef4444; margin-top:12px; font-size:14px; font-weight:700;">بيانات الدخول غير صحيحة أو غير مسندة</p>
+    </div>
+</div>
+
 <nav class="navbar">
     <div style="display:flex; gap:10px; align-items:center;">
-        <div class="logo-box">أ</div>
+        <div class="logo-box">ت</div>
         <div><h2 style="margin:0; font-size:16px; font-weight:900;">بوابة المعلم</h2></div>
     </div>
     <div style="text-align: left;">
-        <strong id="displayTeacher" style="font-size:14px; display:block;"></strong>
-        <span id="displaySubj" style="font-size:11px; color:var(--muted)"></span>
+        <strong id="displayTeacher" style="font-size:14px; display:block;">--</strong>
+        <span id="displaySubj" style="font-size:11px; color:var(--muted)">--</span>
     </div>
 </nav>
 
@@ -159,11 +159,11 @@
     <div class="control-panel">
         <div class="class-selector-grid">
             <div class="form-group">
-                <label>الصف الدراسي</label>
+                <label>الصف الدراسي المتاح</label>
                 <select id="selGrade" class="inp" onchange="handleGradeChange()"></select>
             </div>
             <div class="form-group">
-                <label>الفصل / الشعبة</label>
+                <label>الفصل / الشعبة المسندة</label>
                 <select id="selClassroom" class="inp" onchange="loadStudents()"></select>
             </div>
         </div>
@@ -208,25 +208,30 @@ let loggedInTeacher = null;
 let currentSubject = "";
 let attachedFileBase64 = "";
 let structuredGrades = {}; 
+let teacherSchoolId = null;
 
-// التحديث الجوهري: حلقة تكرار ذكية للمرور على كافة الإسنادات المكررة سحابياً
+// تنظيف النصوص والأرقام لضمان المطابقة البرمجية
+function cleanString(str) {
+    if(!str) return "";
+    return str.toString().replace(/[٠-٩]/g, function (d) { return d.charCodeAt(0) - 1632; }).trim();
+}
+
 function checkAuth(){
-    const u = document.getElementById('userInp').value.trim();
-    const p = document.getElementById('passInp').value.trim();
+    const u = cleanString(document.getElementById('userInp').value).toLowerCase();
+    const p = cleanString(document.getElementById('passInp').value);
     
     database.ref('assignments').once('value', snapshot=>{
-        const data = snapshot.val();
+        const data = snapshot.val() || {};
         let found = false;
         let combinedClasses = [];
         let teacherDetails = null;
         
-        // المرور على كافة الحسابات المكررة في الفايربيس وجمع فصولها معاً
         for(let key in data){
             if(data[key].teacherUser === u && data[key].teacherPass.toString() === p){
                 teacherDetails = data[key];
+                teacherSchoolId = data[key].schoolId; // ربط المعلم برقم المدرسة سحابياً
                 found = true;
                 
-                // تفكيك النص في حالة كان السجل يحتوي على فصول مفصولة بفاصلة
                 let rawClasses = data[key].className.split(',');
                 rawClasses.forEach(c => {
                     let trimmed = c.trim();
@@ -238,7 +243,6 @@ function checkAuth(){
         }
         
         if(found && teacherDetails){
-            // بناء كائن المعلم النهائي مضافاً إليه كافة الفصول المسندة من السطور المكررة
             loggedInTeacher = {
                 ...teacherDetails,
                 className: combinedClasses.join(', ')
@@ -269,7 +273,7 @@ function startSession(){
             gradeKey = "الصف " + matchNumber[0];
         } else if(fullString.includes("ثاني")) {
             gradeKey = "الصف الثاني";
-        } else if(fullString.includes("ثالع") || fullString.includes("ثالث")) {
+        } else if(fullString.includes("ثالث") || fullString.includes("ثالع")) {
             gradeKey = "الصف الثالث";
         } else if(fullString.includes("أول")) {
             gradeKey = "الصف الأول";
@@ -309,87 +313,100 @@ function handleGradeChange() {
     loadStudents();
 }
 
+// تعديل الميزة الجوهرية: فلترة شاملة تمنع تداخل الأسماء بناءً على المدرسة والصف الدراسي حصراً
 function loadStudents(){
     const cls = document.getElementById('selClassroom').value;
+    const container = document.getElementById('studentsContainer');
+    container.innerHTML = '';
+    resetStats();
+    document.getElementById('totalStds').innerText = 0;
+    document.getElementById('totalSent').innerText = 0;
+    updateAttendanceIndicator();
+
     if(!cls) return;
     
-    database.ref('students/' + cls).on('value', snapshot=>{
-        const students = snapshot.val();
-        const container = document.getElementById('studentsContainer');
-        container.innerHTML = '';
+    // جلب آمن ومباشر من فرع الطلاب لضمان توافق الفصول والمدارس
+    database.ref('students').once('value', snapshot=>{
+        const allStudents = snapshot.val() || {};
         let count = 0;
         
-        for(let key in students){
-            count++;
-            const s = students[key];
-            container.innerHTML += `
-            <div class="student-card" data-key="${key}" id="card_${key}">
-                <div class="student-header" onclick="toggleCard('${key}')">
-                    <div>
-                        <div class="std-name">${s.name}</div>
-                        <div style="font-size:10px; color:var(--muted)">انقر للاختيارات أو الرصد</div>
-                    </div>
-                    <div class="arrow-icon">▼</div>
-                </div>
-                
-                <div class="card-details">
-                    <div class="card-row">
+        for(let key in allStudents){
+            const s = allStudents[key];
+            
+            // شرط الحماية والربط لمنع التداخل (تطابق المدرسة وتطابق الفصل الحالي)
+            if(s.schoolId === teacherSchoolId && s.className === cls) {
+                count++;
+                container.innerHTML += `
+                <div class="student-card" data-key="${key}" id="card_${key}">
+                    <div class="student-header" onclick="toggleCard('${key}')">
                         <div>
-                            <label style="font-size:11px; font-weight:700; color:var(--muted)">التقييم</label>
-                            <select class="inp rank-sel" onchange="updateCardStyle('${key}', this.value)">
-                                <option value="">اختر التقييم</option>
-                                <option value="exc">متميز ✨</option>
-                                <option value="cre">مبدع 🎨</option>
-                                <option value="vg">جيد جداً 👍</option>
-                                <option value="fa">مقبول 🆗</option>
-                                <option value="we">ضعيف ⚠️</option>
-                            </select>
+                            <div class="std-name">${s.studentName || s.name}</div>
+                            <div style="font-size:10px; color:var(--muted)">انقر للاختيارات أو الرصد</div>
                         </div>
-                        <div>
-                            <label style="font-size:11px; font-weight:700; color:var(--muted)">الواجب الدراسي</label>
-                            <input type="text" class="inp hw-inp" placeholder="صـ">
-                        </div>
+                        <div class="arrow-icon">▼</div>
                     </div>
+                    
+                    <div class="card-details">
+                        <div class="card-row">
+                            <div>
+                                <label style="font-size:11px; font-weight:700; color:var(--muted)">التقييم</label>
+                                <select class="inp rank-sel" onchange="updateCardStyle('${key}', this.value)">
+                                    <option value="">اختر التقييم</option>
+                                    <option value="exc">متميز ✨</option>
+                                    <option value="cre">مبدع 🎨</option>
+                                    <option value="vg">جيد جداً 👍</option>
+                                    <option value="fa">مقبول 🆗</option>
+                                    <option value="we">ضعيف ⚠️</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style="font-size:11px; font-weight:700; color:var(--muted)">الواجب الدراسي</label>
+                                <input type="text" class="inp hw-inp" placeholder="صـ">
+                            </div>
+                        </div>
 
-                    <div class="card-row">
-                        <div>
-                            <select class="inp award-sel" onchange="updateAwards()">
-                                <option value="">🏆 الجائزة</option>
-                                <option value="gold">🥇 ذهبية</option>
-                                <option value="silver">🥈 فضية</option>
-                                <option value="bronze">🥉 برونزية</option>
-                            </select>
+                        <div class="card-row">
+                            <div>
+                                <select class="inp award-sel" onchange="updateAwards()">
+                                    <option value="">🏆 الجائزة</option>
+                                    <option value="gold">🥇 ذهبية</option>
+                                    <option value="silver">🥈 فضية</option>
+                                    <option value="bronze">🥉 برونزية</option>
+                                </select>
+                            </div>
+                            <div>
+                                <select class="inp warning-sel">
+                                    <option value="">⚠️ الإجراء</option>
+                                    <option value="yellow">🟨 انذار أول</option>
+                                    <option value="red">🟥 انذار أخير</option>
+                                    <option value="warning">📌 خصم درجة</option>
+                                </select>
+                            </div>
                         </div>
-                        <div>
-                            <select class="inp warning-sel">
-                                <option value="">⚠️ الإجراء</option>
-                                <option value="yellow">🟨 انذار أول</option>
-                                <option value="red">🟥 انذار أخير</option>
-                                <option value="warning">📌 خصم درجة</option>
-                            </select>
-                        </div>
-                    </div>
 
-                    <div>
-                        <div class="chips-container">
-                            <span class="chip" onclick="put(this,'تفاعل مميز اليوم')">👏 مشاركة</span>
-                            <span class="chip" onclick="put(this,'أتم الواجب بنجاح')">✅ حل الواجب</span>
-                            <span class="chip" onclick="put(this,'لم يحل الواجب')">❌ لم يحل</span>
-                            <span class="chip" onclick="put(this,'مشاغب بالحصة')">🗣️ مشاغب</span>
+                        <div>
+                            <div class="chips-container">
+                                <span class="chip" onclick="put(this,'تفاعل مميز اليوم')">👏 مشاركة</span>
+                                <span class="chip" onclick="put(this,'أتم الواجب بنجاح')">✅ حل الواجب</span>
+                                <span class="chip" onclick="put(this,'لم يحل الواجب')">❌ لم يحل</span>
+                                <span class="chip" onclick="put(this,'مشاغب بالحصة')">🗣️ مشاغب</span>
+                            </div>
+                            <textarea class="msg-area" placeholder="اكتب ملاحظة إضافية هنا..."></textarea>
                         </div>
-                        <textarea class="msg-area" placeholder="اكتب ملاحظة إضافية هنا..."></textarea>
-                    </div>
 
-                    <div style="margin-top:12px;">
-                        <button class="btn-action save-btn" onclick="send('${key}',this)" style="width:100%">حفظ وإرسال التقرير</button>
+                        <div style="margin-top:12px;">
+                            <button class="btn-action save-btn" onclick="send('${key}',this)" style="width:100%">حفظ وإرسال التقرير</button>
+                        </div>
                     </div>
-                </div>
-                <div class="sent-badge" id="badge_${key}">✓ تم الإرسال والرصد بنجاح</div>
-            </div>`;
+                    <div class="sent-badge" id="badge_${key}">✓ تم الإرسال والرصد بنجاح</div>
+                </div>`;
+            }
         }
+        
         document.getElementById('totalStds').innerText = count;
-        document.getElementById('totalSent').innerText = 0; // تصفير العداد عند تغيير الفصل
-        resetStats();
+        if(count === 0) {
+            container.innerHTML = `<div style="text-align:center; padding:30px; color:var(--muted); font-weight:700;">⚠️ لا يوجد طلاب مضافين لهذا الفصل حالياً</div>`;
+        }
         updateAttendanceIndicator();
     });
 }
@@ -413,7 +430,12 @@ function updateAttendanceIndicator() {
     const total = parseInt(document.getElementById('totalStds').innerText) || 0;
     const sent = parseInt(document.getElementById('totalSent').innerText) || 0;
     
-    if (total === 0) return;
+    if (total === 0) {
+        document.getElementById('attendanceProgress').style.width = "0%";
+        document.getElementById('attendanceStatus').innerText = "لم يتم الرصد بعد (0%)";
+        document.getElementById('attendanceStatus').style.color = "var(--muted)";
+        return;
+    }
     
     const percentage = Math.round((sent / total) * 100);
     const fill = document.getElementById('attendanceProgress');
