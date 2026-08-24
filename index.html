@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>بوابة المعلم الرقمية - نسخة الهاتف المطورة | Taalamna 👨‍🏫</title>
+    <title>بوابة المعلم الرقمية - نسخة الهاتف المطورة |  👨‍🏫</title>
     
     <meta name="theme-color" content="#4f46e5">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -118,7 +118,6 @@
         <div class="logo-box" style="margin:0 auto 15px">ت</div>
         <h2>بوابة المعلم الرقمية Taalamna</h2>
         <input type="text" id="userInp" class="inp" placeholder="اسم المستخدم" style="margin-bottom:12px">
-        <input type="password" id="passInp" class="inp" placeholder="كلمة المرور" style="margin-bottom:18px">
         <button class="btn-action" style="width:100%" onclick="checkAuth()">تسجيل الدخول</button>
         <p id="errorMsg" style="display:none; color:#ef4444; margin-top:12px; font-size:14px; font-weight:700;">بيانات الدخول غير صحيحة أو غير مسندة</p>
     </div>
@@ -218,7 +217,6 @@ function cleanString(str) {
 
 function checkAuth(){
     const u = cleanString(document.getElementById('userInp').value).toLowerCase();
-    const p = cleanString(document.getElementById('passInp').value);
     
     database.ref('assignments').once('value', snapshot=>{
         const data = snapshot.val() || {};
@@ -227,7 +225,7 @@ function checkAuth(){
         let teacherDetails = null;
         
         for(let key in data){
-            if(data[key].teacherUser === u && data[key].teacherPass.toString() === p){
+            if(data[key].teacherUser === u){
                 teacherDetails = data[key];
                 teacherSchoolId = data[key].schoolId; // ربط المعلم برقم المدرسة سحابياً
                 found = true;
