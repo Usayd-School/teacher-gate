@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>بوابة المعلم الرقمية - نسخة الهاتف المطورة |  👨‍🏫</title>
+    <title>بوابة المعلم الرقمية - نسخة الهاتف المطورة  👨‍🏫</title>
     
     <meta name="theme-color" content="#4f46e5">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -116,7 +116,7 @@
 <div id="loginPage">
     <div class="login-card">
         <div class="logo-box" style="margin:0 auto 15px">ت</div>
-        <h2>بوابة المعلم الرقمية Taalamna</h2>
+        <h2>بوابة المعلم الرقمية </h2>
         <input type="text" id="userInp" class="inp" placeholder="اسم المستخدم" style="margin-bottom:12px">
         <button class="btn-action" style="width:100%" onclick="checkAuth()">تسجيل الدخول</button>
         <p id="errorMsg" style="display:none; color:#ef4444; margin-top:12px; font-size:14px; font-weight:700;">بيانات الدخول غير صحيحة أو غير مسندة</p>
@@ -223,11 +223,13 @@ function checkAuth(){
         let found = false;
         let combinedClasses = [];
         let teacherDetails = null;
+        let teacherKey = null;
         
         for(let key in data){
             if(data[key].teacherUser === u){
                 teacherDetails = data[key];
-                teacherSchoolId = data[key].schoolId; // ربط المعلم برقم المدرسة سحابياً
+                teacherSchoolId = data[key].schoolId;
+                teacherKey = key;
                 found = true;
                 
                 let rawClasses = data[key].className.split(',');
@@ -240,7 +242,12 @@ function checkAuth(){
             }
         }
         
-        if(found && teacherDetails){
+        if(found && teacherDetails && teacherKey){
+            // تحديث زمن تسجيل الدخول تلقائياً لتتفاعل لوحة الإدارة
+            database.ref('assignments/' + teacherKey).update({
+                lastLogin: new Date().toISOString()
+            });
+
             loggedInTeacher = {
                 ...teacherDetails,
                 className: combinedClasses.join(', ')
@@ -311,7 +318,6 @@ function handleGradeChange() {
     loadStudents();
 }
 
-// تعديل الميزة الجوهرية: فلترة شاملة تمنع تداخل الأسماء بناءً على المدرسة والصف الدراسي حصراً
 function loadStudents(){
     const cls = document.getElementById('selClassroom').value;
     const container = document.getElementById('studentsContainer');
@@ -323,7 +329,6 @@ function loadStudents(){
 
     if(!cls) return;
     
-    // جلب آمن ومباشر من فرع الطلاب لضمان توافق الفصول والمدارس
     database.ref('students').once('value', snapshot=>{
         const allStudents = snapshot.val() || {};
         let count = 0;
@@ -331,7 +336,6 @@ function loadStudents(){
         for(let key in allStudents){
             const s = allStudents[key];
             
-            // شرط الحماية والربط لمنع التداخل (تطابق المدرسة وتطابق الفصل الحالي)
             if(s.schoolId === teacherSchoolId && s.className === cls) {
                 count++;
                 container.innerHTML += `
