@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>بوابة المعلم الرقمية - نسخة الهاتف المطورة  👨‍🏫</title>
+    <title>بوابة المعلم الرقمية - نسخة الهاتف المطورة | </title>
     
     <meta name="theme-color" content="#4f46e5">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -209,7 +209,6 @@ let attachedFileBase64 = "";
 let structuredGrades = {}; 
 let teacherSchoolId = null;
 
-// تنظيف النصوص والأرقام لضمان المطابقة البرمجية
 function cleanString(str) {
     if(!str) return "";
     return str.toString().replace(/[٠-٩]/g, function (d) { return d.charCodeAt(0) - 1632; }).trim();
@@ -243,7 +242,6 @@ function checkAuth(){
         }
         
         if(found && teacherDetails && teacherKey){
-            // تحديث زمن تسجيل الدخول تلقائياً لتتفاعل لوحة الإدارة
             database.ref('assignments/' + teacherKey).update({
                 lastLogin: new Date().toISOString()
             });
@@ -525,7 +523,8 @@ function send(stdKey, btn){
         warning: row.querySelector('.warning-sel').value,
         message: row.querySelector('.msg-area').value,
         subject: currentSubject,
-        worksheet: attachedFileBase64
+        worksheet: attachedFileBase64,
+        teacherName: loggedInTeacher.teacherName // <--- تم إضافة اسم المعلم هنا ليظهر بوضوح في لوحة الإدارة
     };
     
     const cls = document.getElementById('selClassroom').value;
