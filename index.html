@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>بوابة المعلم الرقمية - نسخة الهاتف المطورة | </title>
+    <title>بوابة المعلم الرقمية - نسخة الهاتف المطورة 👨‍🏫</title>
     
     <meta name="theme-color" content="#4f46e5">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -48,9 +48,34 @@
         .progress-bar-fill { background: linear-gradient(90deg, #22c55e, #4f46e5); width: 0%; height: 100%; transition: width 0.5s ease; }
 
         .stats-container { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 20px; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; }
-        .stat-card { flex: 0 0 130px; scroll-snap-align: start; background: var(--surface); border-radius: 16px; padding: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); border: 1px solid #e2e8f0; text-align: center; cursor: pointer; }
+        .stat-card { flex: 0 0 130px; scroll-snap-align: start; background: var(--surface); border-radius: 16px; padding: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); border: 1px solid #e2e8f0; text-align: center; cursor: pointer; transition: transform 0.2s; }
+        .stat-card:active { transform: scale(0.95); }
         .stat-card h4 { margin: 0; color: var(--muted); font-size: 11px; font-weight: 700; }
         .stat-card p { margin: 6px 0 0; font-size: 22px; font-weight: 900; color: var(--primary); }
+
+        .glass-log-container {
+            background: rgba(255, 255, 255, 0.4);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-radius: 16px;
+            padding: 15px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.05);
+            display: none;
+        }
+        .log-entry {
+            background: rgba(255, 255, 255, 0.8);
+            padding: 12px;
+            border-radius: 12px;
+            margin-top: 10px;
+            font-size: 13px;
+            border-right: 4px solid var(--primary);
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
 
         .control-panel { background: var(--surface); border-radius: 20px; padding: 15px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 20px; display: flex; flex-direction: column; gap: 12px; }
         
@@ -78,17 +103,19 @@
         .card-details { padding: 0 16px; max-height: 0; overflow: hidden; transition: max-height 0.3s ease, padding 0.3s ease; background: #fafafa; }
         
         .student-card.expanded { box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05); border-color: #cbd5e1; }
-        .student-card.expanded .card-details { padding: 16px; max-height: 520px; border-top: 1px dashed #f1f5f9; }
+        .student-card.expanded .card-details { padding: 16px; max-height: 850px; border-top: 1px dashed #f1f5f9; }
         .student-card.expanded .arrow-icon { transform: rotate(180deg); color: var(--primary); }
 
         .card-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
         .chips-container { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
-        .chip { padding: 6px 10px; border-radius: 8px; background: #f1f5f9; font-size: 11px; font-weight: 700; cursor: pointer; }
+        .chip { padding: 6px 10px; border-radius: 8px; background: #f1f5f9; font-size: 11px; font-weight: 700; cursor: pointer; border: 1px solid transparent; transition: 0.2s; }
+        .chip:hover { background: #e2e8f0; }
         .chip.selected { background: #e0e7ff; border-color: var(--primary); color: var(--primary); }
 
-        .msg-area { width: 100%; min-height: 50px; border-radius: 10px; border: 1px solid #e2e8f0; padding: 10px; font-size: 13px; background: #f8fafc; resize: none; }
-        .sent-badge { display: none; background: var(--exc-bg); color: var(--exc-txt); border-radius: 10px; padding: 10px; font-weight: 900; text-align: center; font-size: 14px; }
-        .row-dim { opacity: 0.5; pointer-events: none; }
+        .msg-area { width: 100%; min-height: 50px; border-radius: 10px; border: 1px solid #e2e8f0; padding: 10px; font-size: 13px; background: #f8fafc; resize: none; margin-top: 5px; }
+        .sent-badge { display: none; background: var(--exc-bg); color: var(--exc-txt); border-radius: 10px; padding: 12px; font-weight: 900; text-align: center; font-size: 14px; margin: 10px; }
+        .row-dim { opacity: 0.6; pointer-events: none; }
+        .row-dim .sent-badge { pointer-events: auto; }
 
         .card-exc { border-right: 6px solid #22c55e; }
         .card-cre { border-right: 6px solid #a855f7; }
@@ -96,9 +123,13 @@
         .card-fa { border-right: 6px solid #eab308; }
         .card-we { border-right: 6px solid #ef4444; }
 
-        #notification { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--dark); color: white; padding: 12px 24px; border-radius: 50px; font-weight: 700; display: none; z-index: 6000; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
-        #studentsPopup { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 5000; display: none; align-items: center; justify-content: center; padding: 20px; }
-        .popup-content { width: 100%; max-width: 400px; background: white; border-radius: 24px; padding: 20px; max-height: 75vh; overflow-y: auto; }
+        #notification { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--dark); color: white; padding: 12px 24px; border-radius: 50px; font-weight: 700; display: none; z-index: 6000; box-shadow: 0 10px 25px rgba(0,0,0,0.2); transition: background 0.3s; }
+        
+        #studentsPopup { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 5000; display: none; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(4px); }
+        .popup-content { width: 100%; max-width: 480px; background: #f8fafc; border-radius: 24px; padding: 20px; max-height: 80vh; overflow-y: auto; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); }
+        
+        .delete-btn { background: #ef4444; color: white; border: none; padding: 6px 12px; border-radius: 8px; font-size: 11px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; transition: 0.2s; }
+        .delete-btn:active { transform: scale(0.95); }
     </style>
 </head>
 <body>
@@ -107,16 +138,16 @@
 
 <div id="studentsPopup">
     <div class="popup-content">
-        <h3 id="popupTitle" style="margin-top:0; font-weight:900;">القائمة</h3>
-        <div id="popupStudents"></div>
-        <button class="btn-action" onclick="closePopup()" style="width:100%; margin-top:15px; background:#64748b;">إغلاق</button>
+        <h3 id="popupTitle" style="margin-top:0; font-weight:900; color:var(--dark); text-align:center; padding-bottom:10px; border-bottom:2px solid #e2e8f0;">السجل التاريخي للتقييمات</h3>
+        <div id="popupStudents" style="margin-top:15px; display:flex; flex-direction:column; gap:8px;"></div>
+        <button class="btn-action" onclick="closePopup()" style="width:100%; margin-top:20px; background:var(--dark);">إغلاق السجل</button>
     </div>
 </div>
 
 <div id="loginPage">
     <div class="login-card">
         <div class="logo-box" style="margin:0 auto 15px">ت</div>
-        <h2>بوابة المعلم الرقمية </h2>
+        <h2>بوابة المعلم الرقمية</h2>
         <input type="text" id="userInp" class="inp" placeholder="اسم المستخدم" style="margin-bottom:12px">
         <button class="btn-action" style="width:100%" onclick="checkAuth()">تسجيل الدخول</button>
         <p id="errorMsg" style="display:none; color:#ef4444; margin-top:12px; font-size:14px; font-weight:700;">بيانات الدخول غير صحيحة أو غير مسندة</p>
@@ -148,11 +179,25 @@
     <div class="stats-container">
         <div class="stat-card"><h4>إجمالي الطلاب</h4><p id="totalStds">0</p></div>
         <div class="stat-card"><h4>رُصد اليوم</h4><p id="totalSent">0</p></div>
-        <div class="stat-card" onclick="showStudentsList('exc')"><h4>المتميزون ✨</h4><p id="excCount">0</p></div>
-        <div class="stat-card" onclick="showStudentsList('we')"><h4>الضعاف ⚠️</h4><p id="weakCount">0</p></div>
-        <div class="stat-card" onclick="showStudentsList('gold')"><h4>🥇 ذهبية</h4><p id="goldCount">0</p></div>
-        <div class="stat-card" onclick="showStudentsList('silver')"><h4>🥈 فضية</h4><p id="silverCount">0</p></div>
-        <div class="stat-card" onclick="showStudentsList('bronze')"><h4>🥉 برونزية</h4><p id="bronzeCount">0</p></div>
+        <div class="stat-card" onclick="showHomeworkList()"><h4>سجل الواجبات 📚</h4><p id="hwCount">0</p></div>
+        <div class="stat-card" onclick="showHistoricalList('all')"><h4>سجل الملاحظات 📝</h4><p id="notesCount">0</p></div>
+        <div class="stat-card" onclick="showHistoricalList('exc')"><h4>المتميزون ✨</h4><p id="excCount">0</p></div>
+        <div class="stat-card" onclick="showHistoricalList('cre')"><h4>المبدعون 🎨</h4><p id="creCount">0</p></div>
+        <div class="stat-card" onclick="showHistoricalList('vg')"><h4>جيد جداً 👍</h4><p id="vgCount">0</p></div>
+        <div class="stat-card" onclick="showHistoricalList('fa')"><h4>مقبول 🆗</h4><p id="faCount">0</p></div>
+        <div class="stat-card" onclick="showHistoricalList('we')"><h4>الضعاف ⚠️</h4><p id="weakCount">0</p></div>
+        <div class="stat-card" onclick="showHistoricalList('gold')"><h4>🥇 ذهبية</h4><p id="goldCount">0</p></div>
+        <div class="stat-card" onclick="showHistoricalList('silver')"><h4>🥈 فضية</h4><p id="silverCount">0</p></div>
+        <div class="stat-card" onclick="showHistoricalList('bronze')"><h4>🥉 برونزية</h4><p id="bronzeCount">0</p></div>
+    </div>
+
+    <div class="glass-log-container" id="evaluationLog">
+        <div class="tracker-header">
+            <span style="color: var(--dark)">📋 سجل العمليات الحالي:</span>
+        </div>
+        <div id="logEntries" style="max-height: 200px; overflow-y: auto;">
+            <!-- ستظهر التقييمات والملاحظات هنا فور إرسالها -->
+        </div>
     </div>
 
     <div class="control-panel">
@@ -208,6 +253,7 @@ let currentSubject = "";
 let attachedFileBase64 = "";
 let structuredGrades = {}; 
 let teacherSchoolId = null;
+let currentClassStudents = {}; 
 
 function cleanString(str) {
     if(!str) return "";
@@ -316,11 +362,58 @@ function handleGradeChange() {
     loadStudents();
 }
 
+function fetchHistoricalStats(cls) {
+    if (!cls) {
+        resetStats();
+        return;
+    }
+    
+    database.ref('evaluations/' + cls).once('value', snapshot => {
+        const data = snapshot.val();
+        let stats = { exc: 0, cre: 0, vg: 0, fa: 0, we: 0, gold: 0, silver: 0, bronze: 0, notesCount: 0, hwCount: 0 };
+        
+        if (data) {
+            for (let stdKey in data) {
+                if(!currentClassStudents[stdKey]) continue;
+
+                for (let recordKey in data[stdKey]) {
+                    let record = data[stdKey][recordKey];
+                    
+                    if (record.level && stats[record.level] !== undefined) {
+                        stats[record.level]++;
+                    }
+                    if (record.award && stats[record.award] !== undefined) {
+                        stats[record.award]++;
+                    }
+                    if (record.message && record.message.trim() !== '') {
+                        stats.notesCount++;
+                    }
+                    if (record.homework && record.homework.trim() !== '') {
+                        stats.hwCount++;
+                    }
+                }
+            }
+        }
+        
+        document.getElementById('excCount').innerText = stats.exc;
+        document.getElementById('creCount').innerText = stats.cre;
+        document.getElementById('vgCount').innerText = stats.vg;
+        document.getElementById('faCount').innerText = stats.fa;
+        document.getElementById('weakCount').innerText = stats.we;
+        document.getElementById('goldCount').innerText = stats.gold;
+        document.getElementById('silverCount').innerText = stats.silver;
+        document.getElementById('bronzeCount').innerText = stats.bronze;
+        document.getElementById('notesCount').innerText = stats.notesCount;
+        document.getElementById('hwCount').innerText = stats.hwCount;
+    });
+}
+
 function loadStudents(){
     const cls = document.getElementById('selClassroom').value;
     const container = document.getElementById('studentsContainer');
     container.innerHTML = '';
-    resetStats();
+    currentClassStudents = {}; 
+    
     document.getElementById('totalStds').innerText = 0;
     document.getElementById('totalSent').innerText = 0;
     updateAttendanceIndicator();
@@ -336,12 +429,15 @@ function loadStudents(){
             
             if(s.schoolId === teacherSchoolId && s.className === cls) {
                 count++;
+                let stdName = s.studentName || s.name;
+                currentClassStudents[key] = stdName; 
+
                 container.innerHTML += `
                 <div class="student-card" data-key="${key}" id="card_${key}">
                     <div class="student-header" onclick="toggleCard('${key}')">
                         <div>
-                            <div class="std-name">${s.studentName || s.name}</div>
-                            <div style="font-size:10px; color:var(--muted)">انقر للاختيارات أو الرصد</div>
+                            <div class="std-name">${stdName}</div>
+                            <div style="font-size:11px; color:var(--primary); font-weight:700; margin-top:2px;" onclick="event.stopPropagation(); showStudentHistory('${key}', '${stdName}')">📋 فتح سجل الملاحظات والواجبات للطالب</div>
                         </div>
                         <div class="arrow-icon">▼</div>
                     </div>
@@ -367,7 +463,7 @@ function loadStudents(){
 
                         <div class="card-row">
                             <div>
-                                <select class="inp award-sel" onchange="updateAwards()">
+                                <select class="inp award-sel">
                                     <option value="">🏆 الجائزة</option>
                                     <option value="gold">🥇 ذهبية</option>
                                     <option value="silver">🥈 فضية</option>
@@ -386,10 +482,23 @@ function loadStudents(){
 
                         <div>
                             <div class="chips-container">
-                                <span class="chip" onclick="put(this,'تفاعل مميز اليوم')">👏 مشاركة</span>
-                                <span class="chip" onclick="put(this,'أتم الواجب بنجاح')">✅ حل الواجب</span>
-                                <span class="chip" onclick="put(this,'لم يحل الواجب')">❌ لم يحل</span>
-                                <span class="chip" onclick="put(this,'مشاغب بالحصة')">🗣️ مشاغب</span>
+                                <span class="chip" onclick="put(this,'⭐ مشاركة متميزة ورائعة بالحصة')">⭐ مشاركة متميزة</span>
+                                <span class="chip" onclick="put(this,'💐 كل الشكر والتقدير للجهود المبذولة والتميز المستمر')">💐 شكر وتقدير</span>
+                                <span class="chip" onclick="put(this,'👍 مشاركة جيدة وتفاعل إيجابي أثناء الدرس')">👍 مشاركة جيدة</span>
+                                <span class="chip" onclick="put(this,'✅ أنجز الواجبات المطلوبة بدقة واهتمام')">✅ أنجز الواجب</span>
+                                <span class="chip" onclick="put(this,'👏 تطور ملحوظ في المستوى والتفاعل')">👏 تطور ملحوظ</span>
+                                <span class="chip" onclick="put(this,'🤝 متعاون مع زملائه ومبادر في الأنشطة')">🤝 متعاون ومبادر</span>
+                                <span class="chip" onclick="put(this,'⚠️ مستوى المشاركة ضعيف ويحتاج إلى تشجيع مستمر')">⚠️ مشاركة ضعيفة</span>
+                                <span class="chip" onclick="put(this,'❌ لم ينجز الواجب المطلوب لهذا اليوم')">❌ لم ينجز الواجب</span>
+                                <span class="chip" onclick="put(this,'🚫 لم يحضر الكتاب المدرسي')">🚫 لم يحضر الكتاب</span>
+                                <span class="chip" onclick="put(this,'🖊️ لم يحضر القلم')">🖊️ لم يحضر القلم</span>
+                                <span class="chip" onclick="put(this,'🎒 لم يحضر المستلزمات المدرسية')">🎒 إهمال المستلزمات</span>
+                                <span class="chip" onclick="put(this,'📘 يحتاج إلى مزيد من التركيز والانتباه أثناء الشرح')">📘 يحتاج للتركيز</span>
+                                <span class="chip" onclick="put(this,'🗣️ الانشغال بالأحاديث الجانبية يؤثر على استيعابه')">🗣️ أحاديث جانبية</span>
+                                <span class="chip" onclick="put(this,'😴 النوم أثناء الشرح مما يؤثر على تركيزه واستيعابه')">😴 النوم</span>
+                                <span class="chip" onclick="put(this,'🚨 تكرار النوم والنعاس بالحصة بشكل ملحوظ')">🚨 تكرار النوم</span>
+                                <span class="chip" onclick="put(this,'📝 دفتر الطالب يحتاج إلى ترتيب وعناية أكبر')">📝 ترتيب الدفتر</span>
+                                <span class="chip" onclick="put(this,'📉 مستوى التحصيل في تراجع ويحتاج لمتابعة مستمرة')">📉 تراجع بالمستوى</span>
                             </div>
                             <textarea class="msg-area" placeholder="اكتب ملاحظة إضافية هنا..."></textarea>
                         </div>
@@ -398,7 +507,7 @@ function loadStudents(){
                             <button class="btn-action save-btn" onclick="send('${key}',this)" style="width:100%">حفظ وإرسال التقرير</button>
                         </div>
                     </div>
-                    <div class="sent-badge" id="badge_${key}">✓ تم الإرسال والرصد بنجاح</div>
+                    <div class="sent-badge" id="badge_${key}"></div>
                 </div>`;
             }
         }
@@ -407,6 +516,8 @@ function loadStudents(){
         if(count === 0) {
             container.innerHTML = `<div style="text-align:center; padding:30px; color:var(--muted); font-weight:700;">⚠️ لا يوجد طلاب مضافين لهذا الفصل حالياً</div>`;
         }
+
+        fetchHistoricalStats(cls);
         updateAttendanceIndicator();
     });
 }
@@ -467,7 +578,6 @@ function updateCardStyle(key, value) {
     const card = document.getElementById('card_' + key);
     card.className = "student-card expanded"; 
     if(value) card.classList.add('card-' + value);
-    updateStats();
 }
 
 function put(chip, txt){
@@ -477,34 +587,17 @@ function put(chip, txt){
     chip.classList.add('selected');
 }
 
-function updateStats(){
-    let weak = 0, exc = 0;
-    document.querySelectorAll('.rank-sel').forEach(s => {
-        if(s.value === 'we') weak++;
-        if(s.value === 'exc') exc++;
-    });
-    document.getElementById('weakCount').innerText = weak;
-    document.getElementById('excCount').innerText = exc;
-}
-
-function updateAwards(){
-    let g = 0, s = 0, b = 0;
-    document.querySelectorAll('.award-sel').forEach(sel => {
-        if(sel.value === 'gold') g++;
-        if(sel.value === 'silver') s++;
-        if(sel.value === 'bronze') b++;
-    });
-    document.getElementById('goldCount').innerText = g;
-    document.getElementById('silverCount').innerText = s;
-    document.getElementById('bronzeCount').innerText = b;
-}
-
 function resetStats() {
     document.getElementById('weakCount').innerText = 0;
     document.getElementById('excCount').innerText = 0;
+    document.getElementById('creCount').innerText = 0;
+    document.getElementById('vgCount').innerText = 0;
+    document.getElementById('faCount').innerText = 0;
     document.getElementById('goldCount').innerText = 0;
     document.getElementById('silverCount').innerText = 0;
     document.getElementById('bronzeCount').innerText = 0;
+    document.getElementById('notesCount').innerText = 0;
+    document.getElementById('hwCount').innerText = 0;
 }
 
 function applyBulk(){
@@ -514,39 +607,126 @@ function applyBulk(){
 
 function send(stdKey, btn){
     const row = btn.closest('.student-card');
+    const stdName = row.querySelector('.std-name').innerText;
+    
+    const rankSel = row.querySelector('.rank-sel');
+    const rankValue = rankSel.value;
+    const rankText = rankValue ? rankSel.options[rankSel.selectedIndex].text : "";
+
+    const awardSel = row.querySelector('.award-sel');
+    const awardValue = awardSel.value;
+    const awardText = awardValue ? awardSel.options[awardSel.selectedIndex].text : "";
+    
+    const hwValue = row.querySelector('.hw-inp').value;
+    const msgValue = row.querySelector('.msg-area').value;
+    
     const data = {
+        studentName: stdName, 
         date: new Date().toLocaleDateString('ar-SA'),
         time: new Date().toLocaleTimeString('ar-SA'),
-        level: row.querySelector('.rank-sel').value,
-        homework: row.querySelector('.hw-inp').value,
-        award: row.querySelector('.award-sel').value,
+        level: rankValue,
+        homework: hwValue,
+        award: awardValue,
         warning: row.querySelector('.warning-sel').value,
-        message: row.querySelector('.msg-area').value,
+        message: msgValue,
         subject: currentSubject,
         worksheet: attachedFileBase64,
-        teacherName: loggedInTeacher.teacherName // <--- تم إضافة اسم المعلم هنا ليظهر بوضوح في لوحة الإدارة
+        teacherName: loggedInTeacher.teacherName
     };
     
     const cls = document.getElementById('selClassroom').value;
     database.ref('evaluations/' + cls + '/' + stdKey).push(data).then(()=>{
         row.classList.remove('expanded');
-        row.querySelector('.card-details').style.display = 'none';
-        document.getElementById('badge_' + stdKey).style.display = 'block';
+        
+        if (rankValue) {
+            let rankElement = document.getElementById(rankValue + 'Count');
+            if (rankElement) rankElement.innerText = parseInt(rankElement.innerText) + 1;
+        }
+        if (awardValue) {
+            let awardElement = document.getElementById(awardValue + 'Count');
+            if (awardElement) awardElement.innerText = parseInt(awardElement.innerText) + 1;
+        }
+        if (msgValue) {
+            let notesElem = document.getElementById('notesCount');
+            if (notesElem) notesElem.innerText = parseInt(notesElem.innerText) + 1;
+        }
+        if (hwValue) {
+            let hwElem = document.getElementById('hwCount');
+            if (hwElem) hwElem.innerText = parseInt(hwElem.innerText) + 1;
+        }
+
+        const badge = document.getElementById('badge_' + stdKey);
+        let summaryHtml = `✓ تم الإرسال وحفظ السجل بنجاح`;
+        
+        if(rankValue) {
+            summaryHtml += `<br><span style="font-size:14px; font-weight:900; color:var(--dark); display:inline-block; margin-top:6px;">📊 التقييم: ${rankText}</span>`;
+        }
+        if(awardValue) {
+            summaryHtml += `<br><span style="font-size:12px; font-weight:900; color:#b45309; display:inline-block; margin-top:4px;">🏆 ${awardText}</span>`;
+        }
+        if(hwValue) {
+            summaryHtml += `<br><span style="font-size:12px; font-weight:bold; color:var(--primary); display:inline-block; margin-top:4px;">📚 الواجب: ${hwValue}</span>`;
+        }
+        if(msgValue) {
+            summaryHtml += `<br><span style="font-size:12px; font-weight:normal; display:inline-block; margin-top:4px;">📝 ${msgValue}</span>`;
+        }
+        
+        summaryHtml += `<br><button class="btn-action" onclick="resetCard('${stdKey}')" style="margin-top:10px; background:var(--primary); padding:6px 14px; font-size:12px; width:auto; display:inline-flex;">🔄 إعادة التقييم</button>`;
+
+        badge.innerHTML = summaryHtml;
+        badge.style.display = 'block';
         row.classList.add('row-dim');
-        notify();
+        
+        const logContainer = document.getElementById('evaluationLog');
+        const logEntries = document.getElementById('logEntries');
+        logContainer.style.display = 'block';
+        
+        let logHtml = `<div class="log-entry">
+            <div>
+                <strong style="color:var(--dark)">${stdName}</strong>
+                ${rankText ? `<span style="color:var(--primary); font-size:11px; font-weight:700; margin-right:8px;">[ ${rankText} ]</span>` : (!rankText && !msgValue && !hwValue && !awardValue) ? `<span style="color:var(--muted); font-size:11px; font-weight:700; margin-right:8px;">[ إثبات رصد ]</span>` : ''}
+                ${msgValue ? `<div style="margin-top:4px; color:var(--muted); font-size:12px;">💬 ${msgValue}</div>` : ''}
+            </div>
+            <span style="font-size: 10px; color: var(--muted);">${new Date().toLocaleTimeString('ar-SA')}</span>
+        </div>`;
+        
+        logEntries.insertAdjacentHTML('afterbegin', logHtml);
+        
+        showNotification("تم الحفظ بنجاح ✓");
+        document.getElementById('totalSent').innerText = parseInt(document.getElementById('totalSent').innerText) + 1;
+        updateAttendanceIndicator();
     });
+}
+
+function showNotification(msg, isError = false) {
+    const n = document.getElementById('notification');
+    n.innerText = msg;
+    n.style.background = isError ? "#ef4444" : "var(--dark)";
+    n.style.display = 'block';
+    setTimeout(() => { n.style.display = 'none'; }, 2000);
+}
+
+function resetCard(stdKey) {
+    const row = document.getElementById('card_' + stdKey);
+    if (!row) return;
+    
+    row.classList.remove('row-dim');
+    const badge = document.getElementById('badge_' + stdKey);
+    badge.style.display = 'none';
+    badge.innerHTML = '';
+    
+    row.querySelector('.rank-sel').value = '';
+    row.querySelector('.award-sel').value = '';
+    row.querySelector('.warning-sel').value = '';
+    row.querySelector('.hw-inp').value = '';
+    row.querySelector('.msg-area').value = '';
+    row.querySelectorAll('.chip').forEach(c => c.classList.remove('selected'));
+    
+    row.className = "student-card expanded";
 }
 
 function sendAll(){
     document.querySelectorAll('.student-card:not(.row-dim) .save-btn').forEach(btn => btn.click());
-}
-
-function notify(){
-    const n = document.getElementById('notification');
-    n.style.display = 'block';
-    setTimeout(() => n.style.display = 'none', 2000);
-    document.getElementById('totalSent').innerText = parseInt(document.getElementById('totalSent').innerText) + 1;
-    updateAttendanceIndicator();
 }
 
 function doSearch(){
@@ -557,22 +737,211 @@ function doSearch(){
     });
 }
 
-function showStudentsList(type){
-    let list = [];
-    document.querySelectorAll('.student-card').forEach(row => {
-        const name = row.querySelector('.std-name').innerText;
-        const lvl = row.querySelector('.rank-sel').value;
-        const awd = row.querySelector('.award-sel').value;
-        if(type === 'we' && lvl === 'we') list.push(name);
-        if(type === 'exc' && lvl === 'exc') list.push(name);
-        if(type === 'gold' && awd === 'gold') list.push(name);
-        if(type === 'silver' && awd === 'silver') list.push(name);
-        if(type === 'bronze' && awd === 'bronze') list.push(name);
-    });
-    
-    document.getElementById('popupTitle').innerText = "قائمة الطلاب المصنفين";
-    document.getElementById('popupStudents').innerHTML = list.length ? list.map(n => `<div style="padding:12px; font-weight:700; border-bottom:1px solid #f1f5f9; color:var(--dark);">${n}</div>`).join('') : "<div style='color:var(--muted); padding:15px; text-align:center;'>لا يوجد طلاب في هذه القائمة حالياً</div>";
+// دالة الحذف المشتركة
+function deleteEvaluation(cls, stdKey, recordKey) {
+    if(confirm('هل أنت متأكد من رغبتك في حذف هذا السجل نهائياً؟')) {
+        database.ref('evaluations/' + cls + '/' + stdKey + '/' + recordKey).remove().then(() => {
+            const recDiv = document.getElementById('record_' + recordKey);
+            if(recDiv) recDiv.remove();
+            fetchHistoricalStats(cls); // إعادة حساب الإحصائيات
+            showNotification("تم الحذف بنجاح 🗑️", true);
+        });
+    }
+}
+
+function showHomeworkList() {
     document.getElementById('studentsPopup').style.display = 'flex';
+    document.getElementById('popupTitle').innerText = "📚 سجل الواجبات المدرسية المرصودة";
+    document.getElementById('popupStudents').innerHTML = "<div style='text-align:center; padding:20px; font-weight:bold; color:var(--primary);'>⏳ جاري جلب سجل الواجبات...</div>";
+
+    const cls = document.getElementById('selClassroom').value;
+    if(!cls) {
+        document.getElementById('popupStudents').innerHTML = "<div style='color:var(--muted); padding:15px; text-align:center;'>الرجاء اختيار الفصل أولاً</div>";
+        return;
+    }
+
+    database.ref('evaluations/' + cls).once('value', snapshot => {
+        const data = snapshot.val();
+        let hwRecords = [];
+
+        if(data) {
+            for(let stdKey in data) {
+                if(!currentClassStudents[stdKey]) continue;
+
+                for(let recordKey in data[stdKey]) {
+                    let record = data[stdKey][recordKey];
+                    if(record.homework && record.homework.trim() !== '') {
+                        hwRecords.push({
+                            stdKey: stdKey,
+                            recordKey: recordKey,
+                            name: currentClassStudents[stdKey],
+                            date: record.date || 'غير محدد',
+                            time: record.time || '',
+                            homework: record.homework
+                        });
+                    }
+                }
+            }
+        }
+
+        let listHTML = '';
+        if(hwRecords.length > 0) {
+            listHTML = hwRecords.map(r => `
+                <div id="record_${r.recordKey}" style="background:white; padding:12px; border-radius:12px; border:1px solid #e2e8f0; box-shadow:0 2px 4px rgba(0,0,0,0.02);">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                        <div style="font-weight:900; color:var(--dark); font-size:14px;">👨‍🎓 الطالب: ${r.name}</div>
+                        <button class="delete-btn" onclick="deleteEvaluation('${cls}', '${r.stdKey}', '${r.recordKey}')">🗑️ حذف</button>
+                    </div>
+                    <div style="font-size:13px; color:var(--primary); margin-top:6px; font-weight:700; background:#e0e7ff; padding:8px; border-radius:8px;">
+                        📘 الواجب: ${r.homework}
+                    </div>
+                    <div style="font-size:11px; color:var(--muted); margin-top:6px; display:flex; justify-content:space-between;">
+                        <span>📅 التاريخ: ${r.date}</span>
+                        <span>⏰ ${r.time}</span>
+                    </div>
+                </div>
+            `).join('');
+        } else {
+            listHTML = "<div style='color:var(--muted); padding:25px; text-align:center; font-weight:bold;'>لا توجد واجبات مرصودة حتى الآن.</div>";
+        }
+
+        document.getElementById('popupStudents').innerHTML = listHTML;
+    });
+}
+
+function showStudentHistory(stdKey, stdName) {
+    document.getElementById('studentsPopup').style.display = 'flex';
+    document.getElementById('popupTitle').innerText = "📝 سجل الطالب: " + stdName;
+    document.getElementById('popupStudents').innerHTML = "<div style='text-align:center; padding:20px; font-weight:bold; color:var(--primary);'>⏳ جاري جلب سجلات الطالب...</div>";
+
+    const cls = document.getElementById('selClassroom').value;
+
+    database.ref('evaluations/' + cls + '/' + stdKey).once('value', snapshot => {
+        const data = snapshot.val();
+        let records = [];
+
+        if(data) {
+            for(let recordKey in data) {
+                let record = data[recordKey];
+                if (!record.level && !record.award && !record.warning && 
+                   (!record.homework || record.homework.trim() === '') && 
+                   (!record.message || record.message.trim() === '')) {
+                    continue;
+                }
+                record.recordKey = recordKey;
+                record.stdKey = stdKey;
+                records.push(record);
+            }
+        }
+
+        records.reverse();
+
+        let listHTML = '';
+        if(records.length > 0) {
+            listHTML = records.map(r => `
+                <div id="record_${r.recordKey}" style="background:white; padding:12px; border-radius:12px; border:1px solid #e2e8f0; box-shadow:0 2px 4px rgba(0,0,0,0.02);">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                        <div style="font-size:11px; color:var(--muted);">📅 ${r.date || 'غير محدد'} | ⏰ ${r.time || ''}</div>
+                        <button class="delete-btn" onclick="deleteEvaluation('${cls}', '${r.stdKey}', '${r.recordKey}')">🗑️ حذف</button>
+                    </div>
+                    ${r.level ? `<div style="font-size:12px; font-weight:bold; color:var(--dark); margin-top:4px;">📊 التقييم: ${getRankTitle(r.level)}</div>` : ''}
+                    ${r.homework ? `<div style="font-size:12px; color:var(--primary); margin-top:4px; font-weight:bold;">📚 الواجب: ${r.homework}</div>` : ''}
+                    ${r.message ? `<div style="font-size:12px; color:#1e293b; margin-top:6px; background:#f1f5f9; padding:8px; border-radius:8px;">💬 الملاحظة: ${r.message}</div>` : ''}
+                </div>
+            `).join('');
+        } else {
+            listHTML = "<div style='color:var(--muted); padding:25px; text-align:center; font-weight:bold;'>لا توجد ملاحظات أو سجلات سابقة لهذا الطالب.</div>";
+        }
+
+        document.getElementById('popupStudents').innerHTML = listHTML;
+    });
+}
+
+function getRankTitle(code) {
+    const ranks = { exc: 'متميز ✨', cre: 'مبدع 🎨', vg: 'جيد جداً 👍', fa: 'مقبول 🆗', we: 'ضعيف ⚠️' };
+    return ranks[code] || code;
+}
+
+function showHistoricalList(type){
+    document.getElementById('studentsPopup').style.display = 'flex';
+    document.getElementById('popupTitle').innerText = "السجل التاريخي للتقييمات";
+    document.getElementById('popupStudents').innerHTML = "<div style='text-align:center; padding:20px; font-weight:bold; color:var(--primary);'>⏳ جاري جلب السجل التاريخي...</div>";
+
+    const cls = document.getElementById('selClassroom').value;
+    if(!cls) {
+        document.getElementById('popupStudents').innerHTML = "<div style='color:var(--muted); padding:15px; text-align:center;'>الرجاء اختيار الفصل أولاً</div>";
+        return;
+    }
+
+    database.ref('evaluations/' + cls).once('value', snapshot => {
+        const data = snapshot.val();
+        let records = [];
+
+        if(data) {
+            for(let stdKey in data) {
+                if(!currentClassStudents[stdKey]) continue;
+
+                for(let recordKey in data[stdKey]) {
+                    let record = data[stdKey][recordKey];
+                    let match = false;
+                    
+                    if (!record.level && !record.award && !record.warning && 
+                       (!record.homework || record.homework.trim() === '') && 
+                       (!record.message || record.message.trim() === '')) {
+                        continue;
+                    }
+
+                    if(type === 'all') match = true;
+                    if(type === 'we' && record.level === 'we') match = true;
+                    if(type === 'exc' && record.level === 'exc') match = true;
+                    if(type === 'cre' && record.level === 'cre') match = true;
+                    if(type === 'vg' && record.level === 'vg') match = true;
+                    if(type === 'fa' && record.level === 'fa') match = true;
+                    
+                    if(type === 'gold' && record.award === 'gold') match = true;
+                    if(type === 'silver' && record.award === 'silver') match = true;
+                    if(type === 'bronze' && record.award === 'bronze') match = true;
+
+                    if(match) {
+                        records.push({
+                            stdKey: stdKey,
+                            recordKey: recordKey,
+                            name: currentClassStudents[stdKey],
+                            date: record.date || 'غير محدد',
+                            time: record.time || '',
+                            msg: record.message || '',
+                            homework: record.homework || '',
+                            levelText: getRankTitle(record.level)
+                        });
+                    }
+                }
+            }
+        }
+
+        records.reverse();
+
+        let listHTML = '';
+        if(records.length > 0) {
+            listHTML = records.map(r => `
+                <div id="record_${r.recordKey}" style="background:white; padding:12px; border-radius:12px; border:1px solid #e2e8f0; box-shadow:0 2px 4px rgba(0,0,0,0.02);">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                        <div style="font-weight:900; color:var(--dark); font-size:14px;">${r.name}</div>
+                        <button class="delete-btn" onclick="deleteEvaluation('${cls}', '${r.stdKey}', '${r.recordKey}')">🗑️ حذف</button>
+                    </div>
+                    <div style="font-size:11px; color:var(--muted); margin-top:4px; display:flex; gap:15px;">
+                        <span>📅 تاريخ الرصد: ${r.date}</span>
+                        <span>⏰ ${r.time}</span>
+                    </div>
+                    ${r.homework ? `<div style="font-size:12px; color:var(--primary); font-weight:bold; margin-top:4px;">📚 الواجب: ${r.homework}</div>` : ''}
+                    ${r.msg ? `<div style="font-size:12px; color:var(--dark); margin-top:6px; background:#f0fdf4; padding:8px; border-radius:8px; font-weight:600;">💬 الملاحظة: ${r.msg}</div>` : ''}
+                </div>
+            `).join('');
+        } else {
+            listHTML = "<div style='color:var(--muted); padding:25px; text-align:center; font-weight:bold;'>لا توجد سجلات تاريخية مطابقة حتى الآن.</div>";
+        }
+
+        document.getElementById('popupStudents').innerHTML = listHTML;
+    });
 }
 
 function closePopup(){ document.getElementById('studentsPopup').style.display = 'none'; }
