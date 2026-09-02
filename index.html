@@ -8,8 +8,7 @@
     <meta name="theme-color" content="#4f46e5">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="manifest" href="data:application/manifest+json,{%22name%22:%22%D8%A8%D9%81%D9%80%D9%88%D8%A7%D8%A8%D8%A9%20%D8%A7%D9%84%D9%85%D8%B9%D9%84%D9%85%22,%22short_name%22:%22%D8%A7%D9%84%D9%85%D8%B9%D9%84%D9%85%22,%22start_url%22:%22.%22,%22display%22:%22standalone%22,%22background_color%22:%22%23eef2ff%22,%22theme_color%22:%22%234f46e5%22}">
-
+    
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
@@ -53,31 +52,10 @@
         .stat-card h4 { margin: 0; color: var(--muted); font-size: 11px; font-weight: 700; }
         .stat-card p { margin: 6px 0 0; font-size: 22px; font-weight: 900; color: var(--primary); }
 
-        .glass-log-container {
-            background: rgba(255, 255, 255, 0.4);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border-radius: 16px;
-            padding: 15px;
-            margin-bottom: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.6);
-            box-shadow: 0 8px 16px rgba(0,0,0,0.05);
-            display: none;
-        }
-        .log-entry {
-            background: rgba(255, 255, 255, 0.8);
-            padding: 12px;
-            border-radius: 12px;
-            margin-top: 10px;
-            font-size: 13px;
-            border-right: 4px solid var(--primary);
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-        }
+        .glass-log-container { background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-radius: 16px; padding: 15px; margin-bottom: 20px; border: 1px solid rgba(255, 255, 255, 0.6); box-shadow: 0 8px 16px rgba(0,0,0,0.05); display: none; }
+        .log-entry { background: rgba(255, 255, 255, 0.8); padding: 12px; border-radius: 12px; margin-top: 10px; font-size: 13px; border-right: 4px solid var(--primary); display: flex; justify-content: space-between; align-items: flex-start; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
 
-        .control-panel { background: var(--surface); border-radius: 20px; padding: 15px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 20px; display: flex; flex-direction: column; gap: 12px; }
+        .control-panel { background: var(--surface); border-radius: 20px; padding: 15px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 20px; display: flex; flex-direction: column; gap: 12px; transition: 0.3s all ease; }
         
         .class-selector-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         .form-group { display: flex; flex-direction: column; gap: 4px; }
@@ -196,36 +174,39 @@
             <span style="color: var(--dark)">📋 سجل العمليات الحالي:</span>
         </div>
         <div id="logEntries" style="max-height: 200px; overflow-y: auto;">
-            <!-- ستظهر التقييمات والملاحظات هنا فور إرسالها -->
         </div>
     </div>
 
-    <div class="control-panel">
-        <div class="class-selector-grid">
-            <div class="form-group">
-                <label>الصف الدراسي المتاح</label>
-                <select id="selGrade" class="inp" onchange="handleGradeChange()"></select>
+    <div class="control-panel" id="mainControlPanel">
+        <!-- هذا القسم سيتم إخفاؤه عند الإرسال للكل -->
+        <div id="controlPanelInputs">
+            <div class="class-selector-grid">
+                <div class="form-group">
+                    <label>الصف الدراسي المتاح</label>
+                    <select id="selGrade" class="inp" onchange="handleGradeChange()"></select>
+                </div>
+                <div class="form-group">
+                    <label>الفصل / الشعبة المسندة</label>
+                    <select id="selClassroom" class="inp" onchange="loadStudents()"></select>
+                </div>
             </div>
-            <div class="form-group">
-                <label>الفصل / الشعبة المسندة</label>
-                <select id="selClassroom" class="inp" onchange="loadStudents()"></select>
-            </div>
-        </div>
 
-        <div class="form-group">
-            <label>بحث سريع</label>
-            <input type="text" id="searchInp" class="inp" placeholder="ابحث باسم الطالب..." onkeyup="doSearch()">
-        </div>
-        <div class="form-group">
-            <label>تعميم واجب محدد للكل</label>
-            <div style="display:flex; gap:8px;">
-                <input type="text" id="bulkHw" class="inp" placeholder="مثال: صـ 45">
-                <button class="btn-action" onclick="applyBulk()">تطبيق</button>
+            <div class="form-group" style="margin-top: 10px;">
+                <label>بحث سريع</label>
+                <input type="text" id="searchInp" class="inp" placeholder="ابحث باسم الطالب..." onkeyup="doSearch()">
+            </div>
+            <div class="form-group" style="margin-top: 10px;">
+                <label>تعميم واجب محدد للكل</label>
+                <div style="display:flex; gap:8px;">
+                    <input type="text" id="bulkHw" class="inp" placeholder="مثال: صـ 45">
+                    <button class="btn-action" onclick="applyBulk()">تطبيق</button>
+                </div>
             </div>
         </div>
         
-        <div class="action-group-grid">
-            <button class="btn-action" onclick="sendAll()" style="background:var(--dark);">إرسال للكل ورصد الفصل</button>
+        <div class="action-group-grid" id="mainActionButtons" style="margin-top: 10px;">
+            <button id="btnSendAll" class="btn-action" onclick="sendAll()" style="background:var(--dark);">إرسال للكل ورصد الفصل</button>
+            <button id="btnResetAll" class="btn-action" onclick="resetAllCards()" style="background:#ef4444; display:none;">🔄 إعادة تقييم لجميع الطلاب</button>
             
             <label for="worksheetFile" id="fileLabel" class="btn-file-label">
                 📎 ارفاق ورقة عمل
@@ -379,6 +360,8 @@ function fetchHistoricalStats(cls) {
                 for (let recordKey in data[stdKey]) {
                     let record = data[stdKey][recordKey];
                     
+                    if (record.teacherName && record.teacherName !== loggedInTeacher.teacherName) continue;
+                    
                     if (record.level && stats[record.level] !== undefined) {
                         stats[record.level]++;
                     }
@@ -416,6 +399,12 @@ function loadStudents(){
     
     document.getElementById('totalStds').innerText = 0;
     document.getElementById('totalSent').innerText = 0;
+    
+    // استعادة شكل لوحة التحكم في حال تم تحميل طلاب جدد
+    document.getElementById('controlPanelInputs').style.display = 'block';
+    document.getElementById('btnSendAll').style.display = 'inline-flex';
+    document.getElementById('btnResetAll').style.display = 'none';
+
     updateAttendanceIndicator();
 
     if(!cls) return;
@@ -725,8 +714,43 @@ function resetCard(stdKey) {
     row.className = "student-card expanded";
 }
 
-function sendAll(){
+function resetAllCards() {
+    if(confirm('هل أنت متأكد من رغبتك في إعادة التقييم لجميع طلاب هذا الفصل؟ (سيتم فتح البطاقات للتعديل ولن تُحذف السجلات السابقة تلقائياً إلا إذا قمت بحذفها من السجل التاريخي)')) {
+        document.querySelectorAll('.student-card').forEach(card => {
+            const stdKey = card.getAttribute('data-key');
+            if(stdKey) {
+                resetCard(stdKey);
+                card.classList.remove('expanded'); // إغلاق البطاقة بعد إعادة التهيئ للترتيب
+            }
+        });
+        
+        // إعادة عرض لوحة التحكم وإخفاء زر الإعادة
+        document.getElementById('controlPanelInputs').style.display = 'block';
+        document.getElementById('btnSendAll').style.display = 'inline-flex';
+        document.getElementById('btnResetAll').style.display = 'none';
+    }
+}
+
+function sendAll() {
+    // جلب النص المكتوب في خانة التعميم
+    const bulkHwText = document.getElementById('bulkHw').value.trim();
+    
+    // إذا كان هناك نص، قم بتطبيقه تلقائياً على أي طالب ليس لديه واجب مخصص
+    if(bulkHwText !== "") {
+        document.querySelectorAll('.hw-inp').forEach(input => {
+            if (input.value.trim() === "") {
+                input.value = bulkHwText;
+            }
+        });
+    }
+
+    // تنفيذ عملية الحفظ للجميع
     document.querySelectorAll('.student-card:not(.row-dim) .save-btn').forEach(btn => btn.click());
+    
+    // إخفاء لوحة التحكم وتغيير الأزرار
+    document.getElementById('controlPanelInputs').style.display = 'none';
+    document.getElementById('btnSendAll').style.display = 'none';
+    document.getElementById('btnResetAll').style.display = 'inline-flex';
 }
 
 function doSearch(){
@@ -737,13 +761,12 @@ function doSearch(){
     });
 }
 
-// دالة الحذف المشتركة
 function deleteEvaluation(cls, stdKey, recordKey) {
     if(confirm('هل أنت متأكد من رغبتك في حذف هذا السجل نهائياً؟')) {
         database.ref('evaluations/' + cls + '/' + stdKey + '/' + recordKey).remove().then(() => {
             const recDiv = document.getElementById('record_' + recordKey);
             if(recDiv) recDiv.remove();
-            fetchHistoricalStats(cls); // إعادة حساب الإحصائيات
+            fetchHistoricalStats(cls); 
             showNotification("تم الحذف بنجاح 🗑️", true);
         });
     }
@@ -762,7 +785,7 @@ function showHomeworkList() {
 
     database.ref('evaluations/' + cls).once('value', snapshot => {
         const data = snapshot.val();
-        let hwRecords = [];
+        let groupedHW = {}; 
 
         if(data) {
             for(let stdKey in data) {
@@ -770,37 +793,49 @@ function showHomeworkList() {
 
                 for(let recordKey in data[stdKey]) {
                     let record = data[stdKey][recordKey];
+                    
+                    if (record.teacherName && record.teacherName !== loggedInTeacher.teacherName) continue;
+
                     if(record.homework && record.homework.trim() !== '') {
-                        hwRecords.push({
-                            stdKey: stdKey,
-                            recordKey: recordKey,
-                            name: currentClassStudents[stdKey],
-                            date: record.date || 'غير محدد',
-                            time: record.time || '',
-                            homework: record.homework
-                        });
+                        let groupKey = record.date + "_" + record.homework;
+                        
+                        if(!groupedHW[groupKey]) {
+                            groupedHW[groupKey] = {
+                                date: record.date || 'غير محدد',
+                                time: record.time || '',
+                                homework: record.homework,
+                                students: []
+                            };
+                        }
+                        groupedHW[groupKey].students.push(currentClassStudents[stdKey]);
                     }
                 }
             }
         }
 
         let listHTML = '';
-        if(hwRecords.length > 0) {
-            listHTML = hwRecords.map(r => `
-                <div id="record_${r.recordKey}" style="background:white; padding:12px; border-radius:12px; border:1px solid #e2e8f0; box-shadow:0 2px 4px rgba(0,0,0,0.02);">
-                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-                        <div style="font-weight:900; color:var(--dark); font-size:14px;">👨‍🎓 الطالب: ${r.name}</div>
-                        <button class="delete-btn" onclick="deleteEvaluation('${cls}', '${r.stdKey}', '${r.recordKey}')">🗑️ حذف</button>
+        let hwGroups = Object.values(groupedHW);
+        
+        if(hwGroups.length > 0) {
+            listHTML = hwGroups.map(g => {
+                let stCount = g.students.length;
+                let stNames = stCount > 4 ? g.students.slice(0, 4).join('، ') + ` <span style="color:var(--muted); font-size:11px;">(+${stCount - 4} آخرين)</span>` : g.students.join('، ');
+                
+                return `
+                    <div style="background:white; padding:12px; border-radius:12px; border:1px solid #e2e8f0; box-shadow:0 2px 4px rgba(0,0,0,0.02); margin-bottom:8px;">
+                        <div style="font-size:13px; color:var(--primary); font-weight:900; background:#e0e7ff; padding:8px; border-radius:8px;">
+                            📘 الواجب: ${g.homework}
+                        </div>
+                        <div style="font-size:12px; color:var(--dark); margin-top:8px; font-weight:700;">
+                            👨‍🎓 المستلمين (${stCount}): <span style="font-weight:normal;">${stNames}</span>
+                        </div>
+                        <div style="font-size:11px; color:var(--muted); margin-top:8px; display:flex; justify-content:space-between; border-top:1px dashed #e2e8f0; padding-top:6px;">
+                            <span>📅 التاريخ: ${g.date}</span>
+                            <span>⏰ ${g.time}</span>
+                        </div>
                     </div>
-                    <div style="font-size:13px; color:var(--primary); margin-top:6px; font-weight:700; background:#e0e7ff; padding:8px; border-radius:8px;">
-                        📘 الواجب: ${r.homework}
-                    </div>
-                    <div style="font-size:11px; color:var(--muted); margin-top:6px; display:flex; justify-content:space-between;">
-                        <span>📅 التاريخ: ${r.date}</span>
-                        <span>⏰ ${r.time}</span>
-                    </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         } else {
             listHTML = "<div style='color:var(--muted); padding:25px; text-align:center; font-weight:bold;'>لا توجد واجبات مرصودة حتى الآن.</div>";
         }
@@ -823,6 +858,9 @@ function showStudentHistory(stdKey, stdName) {
         if(data) {
             for(let recordKey in data) {
                 let record = data[recordKey];
+                
+                if (record.teacherName && record.teacherName !== loggedInTeacher.teacherName) continue;
+                
                 if (!record.level && !record.award && !record.warning && 
                    (!record.homework || record.homework.trim() === '') && 
                    (!record.message || record.message.trim() === '')) {
@@ -884,6 +922,8 @@ function showHistoricalList(type){
                 for(let recordKey in data[stdKey]) {
                     let record = data[stdKey][recordKey];
                     let match = false;
+                    
+                    if (record.teacherName && record.teacherName !== loggedInTeacher.teacherName) continue;
                     
                     if (!record.level && !record.award && !record.warning && 
                        (!record.homework || record.homework.trim() === '') && 
