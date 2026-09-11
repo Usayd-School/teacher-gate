@@ -249,19 +249,18 @@ firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 const storage = firebase.storage();
 
-// الإدارة المحلية للبيانات (تخفض الاستهلاك وتسرع الواجهة للصفر ثانية)
 let localData = {
-    students: {},
     evaluations: {}
 };
 
 let loggedInTeacher = null;
 let currentSubject = "";
-let attachedFileObject = null; // تخزين الملف هنا ككائن (File Object) وليس Base64
-let attachedFileUrl = "";      // الرابط بعد الرفع لـ Storage
+let attachedFileObject = null;
+let attachedFileUrl = "";
 let structuredGrades = {}; 
 let teacherSchoolId = null;
 let currentClassStudents = {}; 
+let currentClassListener = null;
 
 function cleanString(str) {
     if(!str) return "";
@@ -317,19 +316,7 @@ function startSession(){
     document.getElementById('displaySubj').innerText = 'مادة: ' + loggedInTeacher.subject;
     currentSubject = loggedInTeacher.subject;
     
-    // تشغيل مستمعات التحديث الفوري لتخزين البيانات محلياً
-    database.ref('students').on('value', snap => {
-        localData.students = snap.val() || {};
-        if(document.getElementById('selClassroom').value) loadStudents(); 
-    });
-    
-    database.ref('evaluations').on('value', snap => {
-        localData.evaluations = snap.val() || {};
-        const cls = document.getElementById('selClassroom').value;
-        if(cls) {
-            fetchHistoricalStats(cls);
-        }
-    });
+    // تم إلغاء الاستماع الشامل لمسار الطلاب والتقييمات بالكامل لتخفيف الضغط
 
     structuredGrades = {};
     const rawClasses = loggedInTeacher.className.split(',');
@@ -423,7 +410,7 @@ function fetchHistoricalStats(cls) {
     document.getElementById('hwCount').innerText = stats.hwCount;
 }
 
-function loadStudents(){
+async function loadStudents(){
     const cls = document.getElementById('selClassroom').value;
     const container = document.getElementById('studentsContainer');
     container.innerHTML = '';
@@ -440,105 +427,122 @@ function loadStudents(){
 
     if(!cls) return;
     
-    const allStudents = localData.students || {}; 
-    let count = 0;
-    
-    for(let key in allStudents){
-        const s = allStudents[key];
+    try {
+        // استعلام موجه للطلاب بحسب الفصل المطلوب فقط مباشرة من الخادم
+        const snap = await database.ref('students').orderByChild('className').equalTo(cls).once('value');
+        const allStudents = snap.val() || {};
+        let count = 0;
         
-        if(s.schoolId === teacherSchoolId && s.className === cls) {
-            count++;
-            let stdName = s.studentName || s.name;
-            currentClassStudents[key] = stdName; 
+        for(let key in allStudents){
+            const s = allStudents[key];
+            
+            if(s.schoolId === teacherSchoolId) {
+                count++;
+                let stdName = s.studentName || s.name;
+                currentClassStudents[key] = stdName; 
 
-            container.innerHTML += `
-            <div class="student-card" data-key="${key}" id="card_${key}">
-                <div class="student-header" onclick="toggleCard('${key}')">
-                    <div>
-                        <div class="std-name">${stdName}</div>
-                        <div style="font-size:11px; color:var(--primary); font-weight:700; margin-top:2px;" onclick="event.stopPropagation(); showStudentHistory('${key}', '${stdName}')">📋 فتح سجل الملاحظات والواجبات للطالب</div>
-                    </div>
-                    <div class="arrow-icon">▼</div>
-                </div>
-                
-                <div class="card-details">
-                    <div class="card-row">
+                container.innerHTML += `
+                <div class="student-card" data-key="${key}" id="card_${key}">
+                    <div class="student-header" onclick="toggleCard('${key}')">
                         <div>
-                            <label style="font-size:11px; font-weight:700; color:var(--muted)">التقييم</label>
-                            <select class="inp rank-sel" onchange="updateCardStyle('${key}', this.value)">
-                                <option value="">اختر التقييم</option>
-                                <option value="exc">متميز ✨</option>
-                                <option value="cre">مبدع 🎨</option>
-                                <option value="vg">جيد جداً 👍</option>
-                                <option value="fa">مقبول 🆗</option>
-                                <option value="we">ضعيف ⚠️</option>
-                            </select>
+                            <div class="std-name">${stdName}</div>
+                            <div style="font-size:11px; color:var(--primary); font-weight:700; margin-top:2px;" onclick="event.stopPropagation(); showStudentHistory('${key}', '${stdName}')">📋 فتح سجل الملاحظات والواجبات للطالب</div>
                         </div>
-                        <div>
-                            <label style="font-size:11px; font-weight:700; color:var(--muted)">الواجب الدراسي</label>
-                            <input type="text" class="inp hw-inp" placeholder="صـ">
-                        </div>
+                        <div class="arrow-icon">▼</div>
                     </div>
+                    
+                    <div class="card-details">
+                        <div class="card-row">
+                            <div>
+                                <label style="font-size:11px; font-weight:700; color:var(--muted)">التقييم</label>
+                                <select class="inp rank-sel" onchange="updateCardStyle('${key}', this.value)">
+                                    <option value="">اختر التقييم</option>
+                                    <option value="exc">متميز ✨</option>
+                                    <option value="cre">مبدع 🎨</option>
+                                    <option value="vg">جيد جداً 👍</option>
+                                    <option value="fa">مقبول 🆗</option>
+                                    <option value="we">ضعيف ⚠️</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style="font-size:11px; font-weight:700; color:var(--muted)">الواجب الدراسي</label>
+                                <input type="text" class="inp hw-inp" placeholder="صـ">
+                            </div>
+                        </div>
 
-                    <div class="card-row">
-                        <div>
-                            <select class="inp award-sel">
-                                <option value="">🏆 الجائزة</option>
-                                <option value="gold">🥇 ذهبية</option>
-                                <option value="silver">🥈 فضية</option>
-                                <option value="bronze">🥉 برونزية</option>
-                            </select>
+                        <div class="card-row">
+                            <div>
+                                <select class="inp award-sel">
+                                    <option value="">🏆 الجائزة</option>
+                                    <option value="gold">🥇 ذهبية</option>
+                                    <option value="silver">🥈 فضية</option>
+                                    <option value="bronze">🥉 برونزية</option>
+                                </select>
+                            </div>
+                            <div>
+                                <select class="inp warning-sel">
+                                    <option value="">⚠️ الإجراء</option>
+                                    <option value="yellow">🟨 انذار أول</option>
+                                    <option value="red">🟥 انذار أخير</option>
+                                    <option value="warning">📌 خصم درجة</option>
+                                </select>
+                            </div>
                         </div>
-                        <div>
-                            <select class="inp warning-sel">
-                                <option value="">⚠️ الإجراء</option>
-                                <option value="yellow">🟨 انذار أول</option>
-                                <option value="red">🟥 انذار أخير</option>
-                                <option value="warning">📌 خصم درجة</option>
-                            </select>
-                        </div>
-                    </div>
 
-                    <div>
-                        <div class="chips-container">
-                            <span class="chip" onclick="put(this,'⭐ مشاركة متميزة ورائعة بالحصة')">⭐ مشاركة متميزة</span>
-                            <span class="chip" onclick="put(this,'💐 كل الشكر والتقدير للجهود المبذولة والتميز المستمر')">💐 شكر وتقدير</span>
-                            <span class="chip" onclick="put(this,'👍 مشاركة جيدة وتفاعل إيجابي أثناء الدرس')">👍 مشاركة جيدة</span>
-                            <span class="chip" onclick="put(this,'✅ أنجز الواجبات المطلوبة بدقة واهتمام')">✅ أنجز الواجب</span>
-                            <span class="chip" onclick="put(this,'👏 تطور ملحوظ في المستوى والتفاعل')">👏 تطور ملحوظ</span>
-                            <span class="chip" onclick="put(this,'🤝 متعاون مع زملائه ومبادر في الأنشطة')">🤝 متعاون ومبادر</span>
-                            <span class="chip" onclick="put(this,'⚠️ مستوى المشاركة ضعيف ويحتاج إلى تشجيع مستمر')">⚠️ مشاركة ضعيفة</span>
-                            <span class="chip" onclick="put(this,'❌ لم ينجز الواجب المطلوب لهذا اليوم')">❌ لم ينجز الواجب</span>
-                            <span class="chip" onclick="put(this,'🚫 لم يحضر الكتاب المدرسي')">🚫 لم يحضر الكتاب</span>
-                            <span class="chip" onclick="put(this,'⚽ لم يحضر الزي الرياضي')">⚽ لم يحضر الزي الرياضي</span>
-                            <span class="chip" onclick="put(this,'🖊️ لم يحضر القلم')">🖊️ لم يحضر القلم</span>
-                            <span class="chip" onclick="put(this,'🎒 لم يحضر المستلزمات المدرسية')">🎒 إهمال المستلزمات</span>
-                            <span class="chip" onclick="put(this,'📘 يحتاج إلى مزيد من التركيز والانتباه أثناء الشرح')">📘 يحتاج للتركيز</span>
-                            <span class="chip" onclick="put(this,'🗣️ الانشغال بالأحاديث الجانبية يؤثر على استيعابه')">🗣️ أحاديث جانبية</span>
-                            <span class="chip" onclick="put(this,'😴 النوم أثناء الشرح مما يؤثر على تركيزه واستيعابه')">😴 النوم</span>
-                            <span class="chip" onclick="put(this,'🚨 تكرار النوم والنعاس بالحصة بشكل ملحوظ')">🚨 تكرار النوم</span>
-                            <span class="chip" onclick="put(this,'📝 دفتر الطالب يحتاج إلى ترتيب وعناية أكبر')">📝 ترتيب الدفتر</span>
-                            <span class="chip" onclick="put(this,'📉 مستوى التحصيل في تراجع ويحتاج لمتابعة مستمرة')">📉 تراجع بالمستوى</span>
+                        <div>
+                            <div class="chips-container">
+                                <span class="chip" onclick="put(this,'⭐ مشاركة متميزة ورائعة بالحصة')">⭐ مشاركة متميزة</span>
+                                <span class="chip" onclick="put(this,'💐 كل الشكر والتقدير للجهود المبذولة والتميز المستمر')">💐 شكر وتقدير</span>
+                                <span class="chip" onclick="put(this,'👍 مشاركة جيدة وتفاعل إيجابي أثناء الدرس')">👍 مشاركة جيدة</span>
+                                <span class="chip" onclick="put(this,'✅ أنجز الواجبات المطلوبة بدقة واهتمام')">✅ أنجز الواجب</span>
+                                <span class="chip" onclick="put(this,'👏 تطور ملحوظ في المستوى والتفاعل')">👏 تطور ملحوظ</span>
+                                <span class="chip" onclick="put(this,'🤝 متعاون مع زملائه ومبادر في الأنشطة')">🤝 متعاون ومبادر</span>
+                                <span class="chip" onclick="put(this,'⚠️ مستوى المشاركة ضعيف ويحتاج إلى تشجيع مستمر')">⚠️ مشاركة ضعيفة</span>
+                                <span class="chip" onclick="put(this,'❌ لم ينجز الواجب المطلوب لهذا اليوم')">❌ لم ينجز الواجب</span>
+                                <span class="chip" onclick="put(this,'🚫 لم يحضر الكتاب المدرسي')">🚫 لم يحضر الكتاب</span>
+                                <span class="chip" onclick="put(this,'⚽ لم يحضر الزي الرياضي')">⚽ لم يحضر الزي الرياضي</span>
+                                <span class="chip" onclick="put(this,'🖊️ لم يحضر القلم')">🖊️ لم يحضر القلم</span>
+                                <span class="chip" onclick="put(this,'🎒 لم يحضر المستلزمات المدرسية')">🎒 إهمال المستلزمات</span>
+                                <span class="chip" onclick="put(this,'📘 يحتاج إلى مزيد من التركيز والانتباه أثناء الشرح')">📘 يحتاج للتركيز</span>
+                                <span class="chip" onclick="put(this,'🗣️ الانشغال بالأحاديث الجانبية يؤثر على استيعابه')">🗣️ أحاديث جانبية</span>
+                                <span class="chip" onclick="put(this,'😴 النوم أثناء الشرح مما يؤثر على تركيزه واستيعابه')">😴 النوم</span>
+                                <span class="chip" onclick="put(this,'🚨 تكرار النوم والنعاس بالحصة بشكل ملحوظ')">🚨 تكرار النوم</span>
+                                <span class="chip" onclick="put(this,'📝 دفتر الطالب يحتاج إلى ترتيب وعناية أكبر')">📝 ترتيب الدفتر</span>
+                                <span class="chip" onclick="put(this,'📉 مستوى التحصيل في تراجع ويحتاج لمتابعة مستمرة')">📉 تراجع بالمستوى</span>
+                            </div>
+                            <textarea class="msg-area" placeholder="اكتب ملاحظة إضافية هنا..."></textarea>
                         </div>
-                        <textarea class="msg-area" placeholder="اكتب ملاحظة إضافية هنا..."></textarea>
-                    </div>
 
-                    <div style="margin-top:12px;">
-                        <button class="btn-action save-btn" onclick="send('${key}',this)" style="width:100%">حفظ وإرسال التقرير</button>
+                        <div style="margin-top:12px;">
+                            <button class="btn-action save-btn" onclick="send('${key}',this)" style="width:100%">حفظ وإرسال التقرير</button>
+                        </div>
                     </div>
-                </div>
-                <div class="sent-badge" id="badge_${key}"></div>
-            </div>`;
+                    <div class="sent-badge" id="badge_${key}"></div>
+                </div>`;
+            }
         }
-    }
-    
-    document.getElementById('totalStds').innerText = count;
-    if(count === 0) {
-        container.innerHTML = `<div style="text-align:center; padding:30px; color:var(--muted); font-weight:700;">⚠️ لا يوجد طلاب مضافين لهذا الفصل حالياً</div>`;
-    }
+        
+        document.getElementById('totalStds').innerText = count;
+        if(count === 0) {
+            container.innerHTML = `<div style="text-align:center; padding:30px; color:var(--muted); font-weight:700;">⚠️ لا يوجد طلاب مضافين لهذا الفصل حالياً</div>`;
+        }
 
-    fetchHistoricalStats(cls);
-    updateAttendanceIndicator();
+        // إيقاف الاستماع عن الفصل السابق إن وجد
+        if (currentClassListener) {
+            database.ref('evaluations/' + currentClassListener).off('value');
+        }
+        currentClassListener = cls;
+
+        // تفعيل الاستماع المباشر فقط للفصل المفتوح حالياً لجلب تقييماته الخاصة 
+        database.ref('evaluations/' + cls).on('value', evSnap => {
+            localData.evaluations[cls] = evSnap.val() || {};
+            fetchHistoricalStats(cls);
+        });
+
+        updateAttendanceIndicator();
+    } catch(err) {
+        console.error("Error loading class data:", err);
+    }
 }
 
 function handleFileSelected(input) {
@@ -654,12 +658,9 @@ async function send(stdKey, btn){
     const hwValue = row.querySelector('.hw-inp').value.trim();
     const msgValue = row.querySelector('.msg-area').value.trim();
     
-    // -------------------------------------------------------------
-    // نظام الحماية 1: التحقق من وجود محتوى قبل الإرسال (للإرسال الفردي والجماعي)
-    // -------------------------------------------------------------
     if (!rankValue && !awardValue && !warningValue && !hwValue && !msgValue && !attachedFileObject) {
         showNotification("لا يمكن إرسال تقييم فارغ، يرجى إدخال محتوى أولاً ⚠️", true);
-        return; // إيقاف العملية ومنع تكوين سجل فارغ في قاعدة البيانات
+        return; 
     }
 
     const cls = document.getElementById('selClassroom').value;
@@ -778,36 +779,57 @@ function resetAllCards() {
     }
 }
 
-// تعديل للإرسال الجماعي مع نظام الحماية
 async function sendAll() {
     const bulkHwText = document.getElementById('bulkHw').value.trim();
+    const cls = document.getElementById('selClassroom').value;
     
-    // -------------------------------------------------------------
-    // نظام الحماية 2: التحقق قبل تنفيذ الإرسال الجماعي
-    // -------------------------------------------------------------
     let hasGlobalContent = (bulkHwText !== "") || (attachedFileObject !== null);
     let hasAnyLocalContent = false;
+    let studentsDataToUpdate = [];
     
     document.querySelectorAll('.student-card:not(.row-dim)').forEach(row => {
-        if (row.querySelector('.rank-sel').value ||
-            row.querySelector('.award-sel').value ||
-            row.querySelector('.warning-sel').value ||
-            row.querySelector('.hw-inp').value.trim() ||
-            row.querySelector('.msg-area').value.trim()) {
+        let rankSel = row.querySelector('.rank-sel');
+        let awardSel = row.querySelector('.award-sel');
+        let warningSel = row.querySelector('.warning-sel');
+        let hwInp = row.querySelector('.hw-inp');
+        let msgArea = row.querySelector('.msg-area');
+
+        let rankValue = rankSel.value;
+        let awardValue = awardSel.value;
+        let warningValue = warningSel.value;
+        let hwValue = hwInp.value.trim();
+        let msgValue = msgArea.value.trim();
+        
+        if (rankValue || awardValue || warningValue || hwValue || msgValue) {
             hasAnyLocalContent = true;
+        }
+        
+        if (bulkHwText !== "") {
+            if (hwValue === "") {
+                hwValue = bulkHwText;
+                hwInp.value = bulkHwText;
+            }
+        }
+        
+        if (rankValue || awardValue || warningValue || hwValue || msgValue || attachedFileObject || bulkHwText !== "") {
+            studentsDataToUpdate.push({
+                row: row,
+                key: row.getAttribute('data-key'),
+                name: row.querySelector('.std-name').innerText,
+                rankValue: rankValue,
+                rankText: rankValue ? rankSel.options[rankSel.selectedIndex].text : "",
+                awardValue: awardValue,
+                awardText: awardValue ? awardSel.options[awardSel.selectedIndex].text : "",
+                warningValue: warningValue,
+                hwValue: hwValue,
+                msgValue: msgValue
+            });
         }
     });
 
-    if (!hasGlobalContent && !hasAnyLocalContent) {
+    if (!hasGlobalContent && !hasAnyLocalContent && studentsDataToUpdate.length === 0) {
         showNotification("لا يمكن إرسال بيانات فارغة للجميع. الرجاء إدخال محتوى أولاً ⚠️", true);
-        return; // منع الإرسال كلياً
-    }
-    // -------------------------------------------------------------
-
-    if(bulkHwText !== "") {
-        document.querySelectorAll('.hw-inp').forEach(input => {
-            if (input.value.trim() === "") input.value = bulkHwText;
-        });
+        return; 
     }
 
     let btnSendAll = document.getElementById('btnSendAll');
@@ -816,11 +838,77 @@ async function sendAll() {
     btnSendAll.disabled = true;
 
     try {
-        await uploadFileIfNeeded(); // يتم الرفع مرة واحدة فقط
+        let finalFileUrl = await uploadFileIfNeeded();
         
-        // محاكاة النقر على كل الأزرار، والطلاب المتروكين "فارغين" سيتم تخطيهم بأمان بفضل الحماية داخل دالة send()
-        document.querySelectorAll('.student-card:not(.row-dim) .save-btn').forEach(btn => btn.click());
+        // تجميع التحديثات في أمر واحد (Batch Updates)
+        let updates = {};
+        let logHtml = "";
+        let count = 0;
+
+        studentsDataToUpdate.forEach(std => {
+            const pushKey = database.ref('evaluations/' + cls + '/' + std.key).push().key;
+            const data = {
+                studentName: std.name,
+                date: new Date().toLocaleDateString('ar-SA'),
+                time: new Date().toLocaleTimeString('ar-SA'),
+                level: std.rankValue,
+                homework: std.hwValue,
+                award: std.awardValue,
+                warning: std.warningValue,
+                message: std.msgValue,
+                subject: currentSubject,
+                worksheet: finalFileUrl || "",
+                teacherName: loggedInTeacher.teacherName,
+                hwStatus: 'pending'
+            };
+            
+            updates['evaluations/' + cls + '/' + std.key + '/' + pushKey] = data;
+
+            // تحديث واجهة المستخدم فوراً للطالب
+            std.row.classList.remove('expanded');
+            const badge = document.getElementById('badge_' + std.key);
+            
+            let summaryHtml = `✓ تم الإرسال وحفظ السجل بنجاح`;
+            if(std.rankValue) summaryHtml += `<br><span style="font-size:14px; font-weight:900; color:var(--dark); display:inline-block; margin-top:6px;">📊 التقييم: ${std.rankText}</span>`;
+            if(std.awardValue) summaryHtml += `<br><span style="font-size:12px; font-weight:900; color:#b45309; display:inline-block; margin-top:4px;">🏆 ${std.awardText}</span>`;
+            if(std.hwValue) summaryHtml += `<br><span style="font-size:12px; font-weight:bold; color:var(--primary); display:inline-block; margin-top:4px;">📚 الواجب: ${std.hwValue}</span>`;
+            if(std.msgValue) summaryHtml += `<br><span style="font-size:12px; font-weight:normal; display:inline-block; margin-top:4px;">📝 ${std.msgValue}</span>`;
+            if(finalFileUrl) summaryHtml += `<br><span style="font-size:12px; font-weight:bold; color:#10b981; display:inline-block; margin-top:4px;">📎 تم إرفاق ورقة العمل</span>`;
+            
+            summaryHtml += `<br><button class="btn-action" onclick="resetCard('${std.key}')" style="margin-top:10px; background:linear-gradient(135deg, var(--primary), var(--secondary)); padding:6px 14px; font-size:12px; width:auto; display:inline-flex;">📝 إعادة الرصد</button>`;
+
+            badge.innerHTML = summaryHtml;
+            badge.style.display = 'block';
+            std.row.classList.add('row-dim');
+            
+            logHtml = `<div class="log-entry">
+                <div>
+                    <strong style="color:var(--dark)">${std.name}</strong>
+                    ${std.rankText ? `<span style="color:var(--primary); font-size:11px; font-weight:700; margin-right:8px;">[ ${std.rankText} ]</span>` : (!std.rankText && !std.msgValue && !std.hwValue && !std.awardValue) ? `<span style="color:var(--muted); font-size:11px; font-weight:700; margin-right:8px;">[ إثبات رصد ]</span>` : ''}
+                    ${std.msgValue ? `<div style="margin-top:4px; color:var(--muted); font-size:12px;">💬 ${std.msgValue}</div>` : ''}
+                </div>
+                <span style="font-size: 10px; color: var(--muted);">${new Date().toLocaleTimeString('ar-SA')}</span>
+            </div>` + logHtml;
+
+            count++;
+        });
+
+        // إرسال جميع التحديثات بقاعدة البيانات في أمر كتابة واحد
+        if(Object.keys(updates).length > 0) {
+            await database.ref().update(updates);
+        }
+
+        if(logHtml !== "") {
+            const logContainer = document.getElementById('evaluationLog');
+            const logEntries = document.getElementById('logEntries');
+            logContainer.style.display = 'block';
+            logEntries.insertAdjacentHTML('afterbegin', logHtml);
+        }
         
+        document.getElementById('totalSent').innerText = parseInt(document.getElementById('totalSent').innerText) + count;
+        updateAttendanceIndicator();
+        showNotification("تم الإرسال للجميع بنجاح ✓");
+
         document.getElementById('controlPanelInputs').style.display = 'none';
         btnSendAll.style.display = 'none';
         document.getElementById('btnResetAll').style.display = 'inline-flex';
@@ -828,7 +916,7 @@ async function sendAll() {
         btnSendAll.innerText = origText;
         btnSendAll.disabled = false;
     } catch(err) {
-        showNotification("حدث خطأ", true);
+        showNotification("حدث خطأ أثناء التحديثات", true);
         btnSendAll.innerText = origText;
         btnSendAll.disabled = false;
     }
@@ -903,10 +991,11 @@ window.editGroupHomework = function(cls, currentHW, studentsJson) {
     let newHW = prompt("تعديل الواجب الدراسي لجميع الطلاب في هذه المجموعة:", currentHW);
     if (newHW !== null && newHW.trim() !== "" && newHW !== currentHW) {
         let students = JSON.parse(decodeURIComponent(studentsJson));
-        let promises = students.map(s => 
-            database.ref('evaluations/' + cls + '/' + s.stdKey + '/' + s.recordKey).update({ homework: newHW })
-        );
-        Promise.all(promises).then(() => {
+        let updates = {};
+        students.forEach(s => {
+            updates['evaluations/' + cls + '/' + s.stdKey + '/' + s.recordKey + '/homework'] = newHW;
+        });
+        database.ref().update(updates).then(() => {
             showNotification("تم تعديل الواجب للمجموعة بنجاح ✏️");
             setTimeout(() => { showHomeworkList(); }, 500);
         });
