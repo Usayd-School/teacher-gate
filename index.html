@@ -10,8 +10,10 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <!-- مكتبات Firebase الأساسية ومكتبة التخزين Storage -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
 
     <style>
         :root {
@@ -66,6 +68,7 @@
         
         .btn-action { border: none; border-radius: 12px; padding: 12px 18px; background: linear-gradient(135deg,var(--primary),var(--secondary)); color: white; font-weight: 700; cursor: pointer; transition: 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 14px; }
         .btn-action:active { transform: scale(0.98); }
+        .btn-action:disabled { opacity: 0.7; cursor: not-allowed; }
 
         .action-group-grid { display: grid; grid-template-columns: 1fr auto; gap: 10px; margin-top: 5px; }
         .btn-file-label { background: #f1f5f9; border: 2px dashed #cbd5e1; color: var(--dark); padding: 12px; border-radius: 12px; font-weight: 700; font-size: 13px; text-align: center; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; }
@@ -81,7 +84,7 @@
         .card-details { padding: 0 16px; max-height: 0; overflow: hidden; transition: max-height 0.3s ease, padding 0.3s ease; background: #fafafa; }
         
         .student-card.expanded { box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05); border-color: #cbd5e1; }
-        .student-card.expanded .card-details { padding: 16px; max-height: 850px; border-top: 1px dashed #f1f5f9; }
+        .student-card.expanded .card-details { padding: 16px; max-height: 900px; border-top: 1px dashed #f1f5f9; }
         .student-card.expanded .arrow-icon { transform: rotate(180deg); color: var(--primary); }
 
         .card-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
@@ -233,19 +236,29 @@
 </div>
 
 <script>
+// إعدادات Firebase مع إضافة Storage Bucket
 const firebaseConfig = {
     apiKey: "AIzaSyCIW17B6y6sG_bdUFqF7FWoVIY9ynXv1B4",
     authDomain: "myschoolproject-4ad92.firebaseapp.com",
     databaseURL: "https://myschoolproject-4ad92-default-rtdb.firebaseio.com",
-    projectId: "myschoolproject-4ad92"
+    projectId: "myschoolproject-4ad92",
+    storageBucket: "myschoolproject-4ad92.appspot.com" // مطلوب للرفع لـ Firebase Storage
 };
 
 firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
+const storage = firebase.storage();
+
+// الإدارة المحلية للبيانات (تخفض الاستهلاك وتسرع الواجهة للصفر ثانية)
+let localData = {
+    students: {},
+    evaluations: {}
+};
 
 let loggedInTeacher = null;
 let currentSubject = "";
-let attachedFileBase64 = "";
+let attachedFileObject = null; // تخزين الملف هنا ككائن (File Object) وليس Base64
+let attachedFileUrl = "";      // الرابط بعد الرفع لـ Storage
 let structuredGrades = {}; 
 let teacherSchoolId = null;
 let currentClassStudents = {}; 
@@ -304,6 +317,20 @@ function startSession(){
     document.getElementById('displaySubj').innerText = 'مادة: ' + loggedInTeacher.subject;
     currentSubject = loggedInTeacher.subject;
     
+    // تشغيل مستمعات التحديث الفوري لتخزين البيانات محلياً
+    database.ref('students').on('value', snap => {
+        localData.students = snap.val() || {};
+        if(document.getElementById('selClassroom').value) loadStudents(); 
+    });
+    
+    database.ref('evaluations').on('value', snap => {
+        localData.evaluations = snap.val() || {};
+        const cls = document.getElementById('selClassroom').value;
+        if(cls) {
+            fetchHistoricalStats(cls);
+        }
+    });
+
     structuredGrades = {};
     const rawClasses = loggedInTeacher.className.split(',');
     
@@ -363,49 +390,37 @@ function fetchHistoricalStats(cls) {
         return;
     }
     
-    database.ref('evaluations/' + cls).once('value', snapshot => {
-        const data = snapshot.val();
-        let stats = { exc: 0, cre: 0, vg: 0, fa: 0, we: 0, gold: 0, silver: 0, bronze: 0, notesCount: 0, hwCount: 0 };
-        let uniqueHW = new Set();
-        
-        if (data) {
-            for (let stdKey in data) {
-                if(!currentClassStudents[stdKey]) continue;
+    const data = localData.evaluations[cls] || {}; 
+    let stats = { exc: 0, cre: 0, vg: 0, fa: 0, we: 0, gold: 0, silver: 0, bronze: 0, notesCount: 0, hwCount: 0 };
+    let uniqueHW = new Set();
+    
+    for (let stdKey in data) {
+        if(!currentClassStudents[stdKey]) continue;
 
-                for (let recordKey in data[stdKey]) {
-                    let record = data[stdKey][recordKey];
-                    
-                    if (record.teacherName && record.teacherName !== loggedInTeacher.teacherName) continue;
-                    
-                    if (record.level && stats[record.level] !== undefined) {
-                        stats[record.level]++;
-                    }
-                    if (record.award && stats[record.award] !== undefined) {
-                        stats[record.award]++;
-                    }
-                    if (record.message && record.message.trim() !== '') {
-                        stats.notesCount++;
-                    }
-                    if (record.homework && record.homework.trim() !== '') {
-                        uniqueHW.add(record.date + "_" + record.homework);
-                    }
-                }
-            }
+        for (let recordKey in data[stdKey]) {
+            let record = data[stdKey][recordKey];
+            
+            if (record.teacherName && record.teacherName !== loggedInTeacher.teacherName) continue;
+            
+            if (record.level && stats[record.level] !== undefined) stats[record.level]++;
+            if (record.award && stats[record.award] !== undefined) stats[record.award]++;
+            if (record.message && record.message.trim() !== '') stats.notesCount++;
+            if (record.homework && record.homework.trim() !== '') uniqueHW.add(record.date + "_" + record.homework);
         }
-        
-        stats.hwCount = uniqueHW.size;
+    }
+    
+    stats.hwCount = uniqueHW.size;
 
-        document.getElementById('excCount').innerText = stats.exc;
-        document.getElementById('creCount').innerText = stats.cre;
-        document.getElementById('vgCount').innerText = stats.vg;
-        document.getElementById('faCount').innerText = stats.fa;
-        document.getElementById('weakCount').innerText = stats.we;
-        document.getElementById('goldCount').innerText = stats.gold;
-        document.getElementById('silverCount').innerText = stats.silver;
-        document.getElementById('bronzeCount').innerText = stats.bronze;
-        document.getElementById('notesCount').innerText = stats.notesCount;
-        document.getElementById('hwCount').innerText = stats.hwCount;
-    });
+    document.getElementById('excCount').innerText = stats.exc;
+    document.getElementById('creCount').innerText = stats.cre;
+    document.getElementById('vgCount').innerText = stats.vg;
+    document.getElementById('faCount').innerText = stats.fa;
+    document.getElementById('weakCount').innerText = stats.we;
+    document.getElementById('goldCount').innerText = stats.gold;
+    document.getElementById('silverCount').innerText = stats.silver;
+    document.getElementById('bronzeCount').innerText = stats.bronze;
+    document.getElementById('notesCount').innerText = stats.notesCount;
+    document.getElementById('hwCount').innerText = stats.hwCount;
 }
 
 function loadStudents(){
@@ -425,106 +440,105 @@ function loadStudents(){
 
     if(!cls) return;
     
-    database.ref('students').once('value', snapshot=>{
-        const allStudents = snapshot.val() || {};
-        let count = 0;
+    const allStudents = localData.students || {}; 
+    let count = 0;
+    
+    for(let key in allStudents){
+        const s = allStudents[key];
         
-        for(let key in allStudents){
-            const s = allStudents[key];
-            
-            if(s.schoolId === teacherSchoolId && s.className === cls) {
-                count++;
-                let stdName = s.studentName || s.name;
-                currentClassStudents[key] = stdName; 
+        if(s.schoolId === teacherSchoolId && s.className === cls) {
+            count++;
+            let stdName = s.studentName || s.name;
+            currentClassStudents[key] = stdName; 
 
-                container.innerHTML += `
-                <div class="student-card" data-key="${key}" id="card_${key}">
-                    <div class="student-header" onclick="toggleCard('${key}')">
-                        <div>
-                            <div class="std-name">${stdName}</div>
-                            <div style="font-size:11px; color:var(--primary); font-weight:700; margin-top:2px;" onclick="event.stopPropagation(); showStudentHistory('${key}', '${stdName}')">📋 فتح سجل الملاحظات والواجبات للطالب</div>
-                        </div>
-                        <div class="arrow-icon">▼</div>
+            container.innerHTML += `
+            <div class="student-card" data-key="${key}" id="card_${key}">
+                <div class="student-header" onclick="toggleCard('${key}')">
+                    <div>
+                        <div class="std-name">${stdName}</div>
+                        <div style="font-size:11px; color:var(--primary); font-weight:700; margin-top:2px;" onclick="event.stopPropagation(); showStudentHistory('${key}', '${stdName}')">📋 فتح سجل الملاحظات والواجبات للطالب</div>
                     </div>
-                    
-                    <div class="card-details">
-                        <div class="card-row">
-                            <div>
-                                <label style="font-size:11px; font-weight:700; color:var(--muted)">التقييم</label>
-                                <select class="inp rank-sel" onchange="updateCardStyle('${key}', this.value)">
-                                    <option value="">اختر التقييم</option>
-                                    <option value="exc">متميز ✨</option>
-                                    <option value="cre">مبدع 🎨</option>
-                                    <option value="vg">جيد جداً 👍</option>
-                                    <option value="fa">مقبول 🆗</option>
-                                    <option value="we">ضعيف ⚠️</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label style="font-size:11px; font-weight:700; color:var(--muted)">الواجب الدراسي</label>
-                                <input type="text" class="inp hw-inp" placeholder="صـ">
-                            </div>
-                        </div>
-
-                        <div class="card-row">
-                            <div>
-                                <select class="inp award-sel">
-                                    <option value="">🏆 الجائزة</option>
-                                    <option value="gold">🥇 ذهبية</option>
-                                    <option value="silver">🥈 فضية</option>
-                                    <option value="bronze">🥉 برونزية</option>
-                                </select>
-                            </div>
-                            <div>
-                                <select class="inp warning-sel">
-                                    <option value="">⚠️ الإجراء</option>
-                                    <option value="yellow">🟨 انذار أول</option>
-                                    <option value="red">🟥 انذار أخير</option>
-                                    <option value="warning">📌 خصم درجة</option>
-                                </select>
-                            </div>
-                        </div>
-
+                    <div class="arrow-icon">▼</div>
+                </div>
+                
+                <div class="card-details">
+                    <div class="card-row">
                         <div>
-                            <div class="chips-container">
-                                <span class="chip" onclick="put(this,'⭐ مشاركة متميزة ورائعة بالحصة')">⭐ مشاركة متميزة</span>
-                                <span class="chip" onclick="put(this,'💐 كل الشكر والتقدير للجهود المبذولة والتميز المستمر')">💐 شكر وتقدير</span>
-                                <span class="chip" onclick="put(this,'👍 مشاركة جيدة وتفاعل إيجابي أثناء الدرس')">👍 مشاركة جيدة</span>
-                                <span class="chip" onclick="put(this,'✅ أنجز الواجبات المطلوبة بدقة واهتمام')">✅ أنجز الواجب</span>
-                                <span class="chip" onclick="put(this,'👏 تطور ملحوظ في المستوى والتفاعل')">👏 تطور ملحوظ</span>
-                                <span class="chip" onclick="put(this,'🤝 متعاون مع زملائه ومبادر في الأنشطة')">🤝 متعاون ومبادر</span>
-                                <span class="chip" onclick="put(this,'⚠️ مستوى المشاركة ضعيف ويحتاج إلى تشجيع مستمر')">⚠️ مشاركة ضعيفة</span>
-                                <span class="chip" onclick="put(this,'❌ لم ينجز الواجب المطلوب لهذا اليوم')">❌ لم ينجز الواجب</span>
-                                <span class="chip" onclick="put(this,'🚫 لم يحضر الكتاب المدرسي')">🚫 لم يحضر الكتاب</span>
-                                <span class="chip" onclick="put(this,'🖊️ لم يحضر القلم')">🖊️ لم يحضر القلم</span>
-                                <span class="chip" onclick="put(this,'🎒 لم يحضر المستلزمات المدرسية')">🎒 إهمال المستلزمات</span>
-                                <span class="chip" onclick="put(this,'📘 يحتاج إلى مزيد من التركيز والانتباه أثناء الشرح')">📘 يحتاج للتركيز</span>
-                                <span class="chip" onclick="put(this,'🗣️ الانشغال بالأحاديث الجانبية يؤثر على استيعابه')">🗣️ أحاديث جانبية</span>
-                                <span class="chip" onclick="put(this,'😴 النوم أثناء الشرح مما يؤثر على تركيزه واستيعابه')">😴 النوم</span>
-                                <span class="chip" onclick="put(this,'🚨 تكرار النوم والنعاس بالحصة بشكل ملحوظ')">🚨 تكرار النوم</span>
-                                <span class="chip" onclick="put(this,'📝 دفتر الطالب يحتاج إلى ترتيب وعناية أكبر')">📝 ترتيب الدفتر</span>
-                                <span class="chip" onclick="put(this,'📉 مستوى التحصيل في تراجع ويحتاج لمتابعة مستمرة')">📉 تراجع بالمستوى</span>
-                            </div>
-                            <textarea class="msg-area" placeholder="اكتب ملاحظة إضافية هنا..."></textarea>
+                            <label style="font-size:11px; font-weight:700; color:var(--muted)">التقييم</label>
+                            <select class="inp rank-sel" onchange="updateCardStyle('${key}', this.value)">
+                                <option value="">اختر التقييم</option>
+                                <option value="exc">متميز ✨</option>
+                                <option value="cre">مبدع 🎨</option>
+                                <option value="vg">جيد جداً 👍</option>
+                                <option value="fa">مقبول 🆗</option>
+                                <option value="we">ضعيف ⚠️</option>
+                            </select>
                         </div>
-
-                        <div style="margin-top:12px;">
-                            <button class="btn-action save-btn" onclick="send('${key}',this)" style="width:100%">حفظ وإرسال التقرير</button>
+                        <div>
+                            <label style="font-size:11px; font-weight:700; color:var(--muted)">الواجب الدراسي</label>
+                            <input type="text" class="inp hw-inp" placeholder="صـ">
                         </div>
                     </div>
-                    <div class="sent-badge" id="badge_${key}"></div>
-                </div>`;
-            }
-        }
-        
-        document.getElementById('totalStds').innerText = count;
-        if(count === 0) {
-            container.innerHTML = `<div style="text-align:center; padding:30px; color:var(--muted); font-weight:700;">⚠️ لا يوجد طلاب مضافين لهذا الفصل حالياً</div>`;
-        }
 
-        fetchHistoricalStats(cls);
-        updateAttendanceIndicator();
-    });
+                    <div class="card-row">
+                        <div>
+                            <select class="inp award-sel">
+                                <option value="">🏆 الجائزة</option>
+                                <option value="gold">🥇 ذهبية</option>
+                                <option value="silver">🥈 فضية</option>
+                                <option value="bronze">🥉 برونزية</option>
+                            </select>
+                        </div>
+                        <div>
+                            <select class="inp warning-sel">
+                                <option value="">⚠️ الإجراء</option>
+                                <option value="yellow">🟨 انذار أول</option>
+                                <option value="red">🟥 انذار أخير</option>
+                                <option value="warning">📌 خصم درجة</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="chips-container">
+                            <span class="chip" onclick="put(this,'⭐ مشاركة متميزة ورائعة بالحصة')">⭐ مشاركة متميزة</span>
+                            <span class="chip" onclick="put(this,'💐 كل الشكر والتقدير للجهود المبذولة والتميز المستمر')">💐 شكر وتقدير</span>
+                            <span class="chip" onclick="put(this,'👍 مشاركة جيدة وتفاعل إيجابي أثناء الدرس')">👍 مشاركة جيدة</span>
+                            <span class="chip" onclick="put(this,'✅ أنجز الواجبات المطلوبة بدقة واهتمام')">✅ أنجز الواجب</span>
+                            <span class="chip" onclick="put(this,'👏 تطور ملحوظ في المستوى والتفاعل')">👏 تطور ملحوظ</span>
+                            <span class="chip" onclick="put(this,'🤝 متعاون مع زملائه ومبادر في الأنشطة')">🤝 متعاون ومبادر</span>
+                            <span class="chip" onclick="put(this,'⚠️ مستوى المشاركة ضعيف ويحتاج إلى تشجيع مستمر')">⚠️ مشاركة ضعيفة</span>
+                            <span class="chip" onclick="put(this,'❌ لم ينجز الواجب المطلوب لهذا اليوم')">❌ لم ينجز الواجب</span>
+                            <span class="chip" onclick="put(this,'🚫 لم يحضر الكتاب المدرسي')">🚫 لم يحضر الكتاب</span>
+                            <span class="chip" onclick="put(this,'⚽ لم يحضر الزي الرياضي')">⚽ لم يحضر الزي الرياضي</span>
+                            <span class="chip" onclick="put(this,'🖊️ لم يحضر القلم')">🖊️ لم يحضر القلم</span>
+                            <span class="chip" onclick="put(this,'🎒 لم يحضر المستلزمات المدرسية')">🎒 إهمال المستلزمات</span>
+                            <span class="chip" onclick="put(this,'📘 يحتاج إلى مزيد من التركيز والانتباه أثناء الشرح')">📘 يحتاج للتركيز</span>
+                            <span class="chip" onclick="put(this,'🗣️ الانشغال بالأحاديث الجانبية يؤثر على استيعابه')">🗣️ أحاديث جانبية</span>
+                            <span class="chip" onclick="put(this,'😴 النوم أثناء الشرح مما يؤثر على تركيزه واستيعابه')">😴 النوم</span>
+                            <span class="chip" onclick="put(this,'🚨 تكرار النوم والنعاس بالحصة بشكل ملحوظ')">🚨 تكرار النوم</span>
+                            <span class="chip" onclick="put(this,'📝 دفتر الطالب يحتاج إلى ترتيب وعناية أكبر')">📝 ترتيب الدفتر</span>
+                            <span class="chip" onclick="put(this,'📉 مستوى التحصيل في تراجع ويحتاج لمتابعة مستمرة')">📉 تراجع بالمستوى</span>
+                        </div>
+                        <textarea class="msg-area" placeholder="اكتب ملاحظة إضافية هنا..."></textarea>
+                    </div>
+
+                    <div style="margin-top:12px;">
+                        <button class="btn-action save-btn" onclick="send('${key}',this)" style="width:100%">حفظ وإرسال التقرير</button>
+                    </div>
+                </div>
+                <div class="sent-badge" id="badge_${key}"></div>
+            </div>`;
+        }
+    }
+    
+    document.getElementById('totalStds').innerText = count;
+    if(count === 0) {
+        container.innerHTML = `<div style="text-align:center; padding:30px; color:var(--muted); font-weight:700;">⚠️ لا يوجد طلاب مضافين لهذا الفصل حالياً</div>`;
+    }
+
+    fetchHistoricalStats(cls);
+    updateAttendanceIndicator();
 }
 
 function handleFileSelected(input) {
@@ -537,16 +551,23 @@ function handleFileSelected(input) {
             return;
         }
 
-        const reader = new FileReader();
-        
-        reader.onload = function(e) {
-            attachedFileBase64 = e.target.result;
-            const label = document.getElementById('fileLabel');
-            label.innerText = "✓ تم إرفاق: " + file.name.substring(0, 10) + "...";
-            label.classList.add('loaded');
-        };
-        reader.readAsDataURL(file);
+        attachedFileObject = file; 
+        attachedFileUrl = "";      
+        const label = document.getElementById('fileLabel');
+        label.innerText = "✓ تم إرفاق: " + file.name.substring(0, 10) + "...";
+        label.classList.add('loaded');
     }
+}
+
+async function uploadFileIfNeeded() {
+    if (attachedFileObject && !attachedFileUrl) {
+        const fileExt = attachedFileObject.name.split('.').pop();
+        const fileName = `worksheets/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+        const storageRef = storage.ref(fileName);
+        const snapshot = await storageRef.put(attachedFileObject);
+        attachedFileUrl = await snapshot.ref.getDownloadURL();
+    }
+    return attachedFileUrl;
 }
 
 function updateAttendanceIndicator() {
@@ -617,7 +638,7 @@ function applyBulk(){
     document.querySelectorAll('.hw-inp').forEach(i => i.value = val);
 }
 
-function send(stdKey, btn){
+async function send(stdKey, btn){
     const row = btn.closest('.student-card');
     const stdName = row.querySelector('.std-name').innerText;
     
@@ -629,45 +650,57 @@ function send(stdKey, btn){
     const awardValue = awardSel.value;
     const awardText = awardValue ? awardSel.options[awardSel.selectedIndex].text : "";
     
-    const hwValue = row.querySelector('.hw-inp').value;
-    const msgValue = row.querySelector('.msg-area').value;
+    const warningValue = row.querySelector('.warning-sel').value;
+    const hwValue = row.querySelector('.hw-inp').value.trim();
+    const msgValue = row.querySelector('.msg-area').value.trim();
     
-    const data = {
-        studentName: stdName, 
-        date: new Date().toLocaleDateString('ar-SA'),
-        time: new Date().toLocaleTimeString('ar-SA'),
-        level: rankValue,
-        homework: hwValue,
-        award: awardValue,
-        warning: row.querySelector('.warning-sel').value,
-        message: msgValue,
-        subject: currentSubject,
-        worksheet: attachedFileBase64,
-        teacherName: loggedInTeacher.teacherName,
-        hwStatus: 'pending' 
-    };
-    
+    // -------------------------------------------------------------
+    // نظام الحماية 1: التحقق من وجود محتوى قبل الإرسال (للإرسال الفردي والجماعي)
+    // -------------------------------------------------------------
+    if (!rankValue && !awardValue && !warningValue && !hwValue && !msgValue && !attachedFileObject) {
+        showNotification("لا يمكن إرسال تقييم فارغ، يرجى إدخال محتوى أولاً ⚠️", true);
+        return; // إيقاف العملية ومنع تكوين سجل فارغ في قاعدة البيانات
+    }
+
     const cls = document.getElementById('selClassroom').value;
-    database.ref('evaluations/' + cls + '/' + stdKey).push(data).then(()=>{
+    
+    let originalText = btn.innerText;
+    btn.innerText = "جاري الرفع والحفظ... ⏳";
+    btn.disabled = true;
+
+    try {
+        let finalFileUrl = await uploadFileIfNeeded();
+
+        const data = {
+            studentName: stdName, 
+            date: new Date().toLocaleDateString('ar-SA'),
+            time: new Date().toLocaleTimeString('ar-SA'),
+            level: rankValue,
+            homework: hwValue,
+            award: awardValue,
+            warning: warningValue,
+            message: msgValue,
+            subject: currentSubject,
+            worksheet: finalFileUrl, 
+            teacherName: loggedInTeacher.teacherName,
+            hwStatus: 'pending' 
+        };
+        
+        await database.ref('evaluations/' + cls + '/' + stdKey).push(data);
+        
+        btn.innerText = originalText;
+        btn.disabled = false;
+
         row.classList.remove('expanded');
         
-        fetchHistoricalStats(cls); 
-
         const badge = document.getElementById('badge_' + stdKey);
         let summaryHtml = `✓ تم الإرسال وحفظ السجل بنجاح`;
         
-        if(rankValue) {
-            summaryHtml += `<br><span style="font-size:14px; font-weight:900; color:var(--dark); display:inline-block; margin-top:6px;">📊 التقييم: ${rankText}</span>`;
-        }
-        if(awardValue) {
-            summaryHtml += `<br><span style="font-size:12px; font-weight:900; color:#b45309; display:inline-block; margin-top:4px;">🏆 ${awardText}</span>`;
-        }
-        if(hwValue) {
-            summaryHtml += `<br><span style="font-size:12px; font-weight:bold; color:var(--primary); display:inline-block; margin-top:4px;">📚 الواجب: ${hwValue}</span>`;
-        }
-        if(msgValue) {
-            summaryHtml += `<br><span style="font-size:12px; font-weight:normal; display:inline-block; margin-top:4px;">📝 ${msgValue}</span>`;
-        }
+        if(rankValue) summaryHtml += `<br><span style="font-size:14px; font-weight:900; color:var(--dark); display:inline-block; margin-top:6px;">📊 التقييم: ${rankText}</span>`;
+        if(awardValue) summaryHtml += `<br><span style="font-size:12px; font-weight:900; color:#b45309; display:inline-block; margin-top:4px;">🏆 ${awardText}</span>`;
+        if(hwValue) summaryHtml += `<br><span style="font-size:12px; font-weight:bold; color:var(--primary); display:inline-block; margin-top:4px;">📚 الواجب: ${hwValue}</span>`;
+        if(msgValue) summaryHtml += `<br><span style="font-size:12px; font-weight:normal; display:inline-block; margin-top:4px;">📝 ${msgValue}</span>`;
+        if(finalFileUrl) summaryHtml += `<br><span style="font-size:12px; font-weight:bold; color:#10b981; display:inline-block; margin-top:4px;">📎 تم إرفاق ورقة العمل</span>`;
         
         summaryHtml += `<br><button class="btn-action" onclick="resetCard('${stdKey}')" style="margin-top:10px; background:linear-gradient(135deg, var(--primary), var(--secondary)); padding:6px 14px; font-size:12px; width:auto; display:inline-flex;">📝 إعادة الرصد</button>`;
 
@@ -693,7 +726,13 @@ function send(stdKey, btn){
         showNotification("تم الحفظ بنجاح ✓");
         document.getElementById('totalSent').innerText = parseInt(document.getElementById('totalSent').innerText) + 1;
         updateAttendanceIndicator();
-    });
+
+    } catch(error) {
+        showNotification("حدث خطأ أثناء رفع البيانات", true);
+        btn.innerText = originalText;
+        btn.disabled = false;
+        console.error(error);
+    }
 }
 
 function showNotification(msg, isError = false) {
@@ -724,7 +763,7 @@ function resetCard(stdKey) {
 }
 
 function resetAllCards() {
-    if(confirm('هل أنت متأكد من رغبتك في إعادة الرصد لجميع طلاب هذا الفصل؟ (سيتم فتح البطاقات للتعديل ولن تُحذف السجلات السابقة تلقائياً إلا إذا قمت بحذفها من السجل التاريخي)')) {
+    if(confirm('هل أنت متأكد من رغبتك في إعادة الرصد لجميع طلاب هذا الفصل؟ (سيتم فتح البطاقات للتعديل ولن تُحذف السجلات السابقة تلقائياً)')) {
         document.querySelectorAll('.student-card').forEach(card => {
             const stdKey = card.getAttribute('data-key');
             if(stdKey) {
@@ -739,22 +778,60 @@ function resetAllCards() {
     }
 }
 
-function sendAll() {
+// تعديل للإرسال الجماعي مع نظام الحماية
+async function sendAll() {
     const bulkHwText = document.getElementById('bulkHw').value.trim();
     
+    // -------------------------------------------------------------
+    // نظام الحماية 2: التحقق قبل تنفيذ الإرسال الجماعي
+    // -------------------------------------------------------------
+    let hasGlobalContent = (bulkHwText !== "") || (attachedFileObject !== null);
+    let hasAnyLocalContent = false;
+    
+    document.querySelectorAll('.student-card:not(.row-dim)').forEach(row => {
+        if (row.querySelector('.rank-sel').value ||
+            row.querySelector('.award-sel').value ||
+            row.querySelector('.warning-sel').value ||
+            row.querySelector('.hw-inp').value.trim() ||
+            row.querySelector('.msg-area').value.trim()) {
+            hasAnyLocalContent = true;
+        }
+    });
+
+    if (!hasGlobalContent && !hasAnyLocalContent) {
+        showNotification("لا يمكن إرسال بيانات فارغة للجميع. الرجاء إدخال محتوى أولاً ⚠️", true);
+        return; // منع الإرسال كلياً
+    }
+    // -------------------------------------------------------------
+
     if(bulkHwText !== "") {
         document.querySelectorAll('.hw-inp').forEach(input => {
-            if (input.value.trim() === "") {
-                input.value = bulkHwText;
-            }
+            if (input.value.trim() === "") input.value = bulkHwText;
         });
     }
 
-    document.querySelectorAll('.student-card:not(.row-dim) .save-btn').forEach(btn => btn.click());
-    
-    document.getElementById('controlPanelInputs').style.display = 'none';
-    document.getElementById('btnSendAll').style.display = 'none';
-    document.getElementById('btnResetAll').style.display = 'inline-flex';
+    let btnSendAll = document.getElementById('btnSendAll');
+    let origText = btnSendAll.innerText;
+    btnSendAll.innerText = "جاري المعالجة للكل... ⏳";
+    btnSendAll.disabled = true;
+
+    try {
+        await uploadFileIfNeeded(); // يتم الرفع مرة واحدة فقط
+        
+        // محاكاة النقر على كل الأزرار، والطلاب المتروكين "فارغين" سيتم تخطيهم بأمان بفضل الحماية داخل دالة send()
+        document.querySelectorAll('.student-card:not(.row-dim) .save-btn').forEach(btn => btn.click());
+        
+        document.getElementById('controlPanelInputs').style.display = 'none';
+        btnSendAll.style.display = 'none';
+        document.getElementById('btnResetAll').style.display = 'inline-flex';
+        
+        btnSendAll.innerText = origText;
+        btnSendAll.disabled = false;
+    } catch(err) {
+        showNotification("حدث خطأ", true);
+        btnSendAll.innerText = origText;
+        btnSendAll.disabled = false;
+    }
 }
 
 function doSearch(){
@@ -773,7 +850,6 @@ function editEvaluationMessage(cls, stdKey, recordKey, currentMsg) {
             message: newMsg
         }).then(() => {
             showNotification("تم تعديل الرسالة بنجاح ✏️");
-            
             let recDiv = document.getElementById('record_' + recordKey);
             if(recDiv) {
                 let msgDiv = recDiv.querySelector('.msg-display');
@@ -788,7 +864,6 @@ function editEvaluationMessage(cls, stdKey, recordKey, currentMsg) {
                     recDiv.insertAdjacentHTML('beforeend', `<div class="msg-display" style="font-size:12px; color:var(--dark); margin-top:6px; background:#f0fdf4; padding:8px; border-radius:8px; font-weight:600;">💬 الملاحظة: ${newMsg}</div>`);
                 }
             }
-            fetchHistoricalStats(cls);
         });
     }
 }
@@ -798,7 +873,6 @@ function deleteEvaluation(cls, stdKey, recordKey) {
         database.ref('evaluations/' + cls + '/' + stdKey + '/' + recordKey).remove().then(() => {
             const recDiv = document.getElementById('record_' + recordKey);
             if(recDiv) recDiv.remove();
-            fetchHistoricalStats(cls); 
             showNotification("تم الحذف بنجاح 🗑️", true);
         });
     }
@@ -809,16 +883,14 @@ window.removeHomeworkFromStudent = function(cls, stdKey, recordKey) {
         database.ref('evaluations/' + cls + '/' + stdKey + '/' + recordKey).once('value', snap => {
             let rec = snap.val();
             if(rec) {
-                if(!rec.level && !rec.award && !rec.warning && (!rec.message || rec.message.trim() === '')) {
+                if(!rec.level && !rec.award && !rec.warning && (!rec.message || rec.message.trim() === '') && !rec.worksheet) {
                     database.ref('evaluations/' + cls + '/' + stdKey + '/' + recordKey).remove().then(() => {
                         showNotification("تم حذف الواجب بنجاح 🗑️", true);
-                        fetchHistoricalStats(cls);
                         showHomeworkList();
                     });
                 } else {
                     database.ref('evaluations/' + cls + '/' + stdKey + '/' + recordKey).update({homework: ""}).then(() => {
                         showNotification("تم إزالة الواجب عن الطالب بنجاح 🗑️", true);
-                        fetchHistoricalStats(cls);
                         showHomeworkList();
                     });
                 }
@@ -836,7 +908,6 @@ window.editGroupHomework = function(cls, currentHW, studentsJson) {
         );
         Promise.all(promises).then(() => {
             showNotification("تم تعديل الواجب للمجموعة بنجاح ✏️");
-            fetchHistoricalStats(cls);
             setTimeout(() => { showHomeworkList(); }, 500);
         });
     }
@@ -849,7 +920,7 @@ window.deleteGroupHomework = function(cls, studentsJson) {
             return database.ref('evaluations/' + cls + '/' + s.stdKey + '/' + s.recordKey).once('value').then(snap => {
                 let rec = snap.val();
                 if(rec) {
-                    if(!rec.level && !rec.award && !rec.warning && (!rec.message || rec.message.trim() === '')) {
+                    if(!rec.level && !rec.award && !rec.warning && (!rec.message || rec.message.trim() === '') && !rec.worksheet) {
                         return database.ref('evaluations/' + cls + '/' + s.stdKey + '/' + s.recordKey).remove();
                     } else {
                         return database.ref('evaluations/' + cls + '/' + s.stdKey + '/' + s.recordKey).update({homework: ""});
@@ -859,18 +930,16 @@ window.deleteGroupHomework = function(cls, studentsJson) {
         });
         Promise.all(promises).then(() => {
             showNotification("تم حذف الواجب الجماعي بنجاح 🗑️", true);
-            fetchHistoricalStats(cls);
             setTimeout(() => { showHomeworkList(); }, 500);
         });
     }
 }
 
 window.editSingleHomework = function(cls, stdKey, recordKey, currentHW) {
-    let newHW = prompt("تعديل الواجب للط الطالب:", currentHW);
+    let newHW = prompt("تعديل الواجب للطالب:", currentHW);
     if (newHW !== null && newHW.trim() !== "" && newHW !== currentHW) {
         database.ref('evaluations/' + cls + '/' + stdKey + '/' + recordKey).update({ homework: newHW }).then(() => {
             showNotification("تم تعديل الواجب للطالب ✏️");
-            fetchHistoricalStats(cls);
             showHomeworkList();
         });
     }
@@ -884,7 +953,6 @@ window.markHomework = function(cls, stdKey, recordKey, status) {
         if(status === 'done') notifMsg = "تم تسجيل الواجب: مكتمل ✅";
         if(status === 'not_done') notifMsg = "تم تسجيل الواجب: لم يتم ❌";
         if(status === 'pending') notifMsg = "تم إعادة تعيين حالة الواجب 🔄";
-        
         showNotification(notifMsg);
         showHomeworkList(); 
     });
@@ -908,124 +976,119 @@ window.showHomeworkList = function() {
     const cls = document.getElementById('selClassroom').value;
     if(!cls) return;
 
-    database.ref('evaluations/' + cls).once('value', snapshot => {
-        const data = snapshot.val();
-        let groupedHW = {};
+    const data = localData.evaluations[cls] || {};
+    let groupedHW = {};
 
-        if (data) {
-            for (let stdKey in data) {
-                if(!currentClassStudents[stdKey]) continue;
+    for (let stdKey in data) {
+        if(!currentClassStudents[stdKey]) continue;
 
-                for (let recordKey in data[stdKey]) {
-                    let record = data[stdKey][recordKey];
-                    
-                    if (record.teacherName && record.teacherName !== loggedInTeacher.teacherName) continue;
-                    
-                    if (record.homework && record.homework.trim() !== '') {
-                        let groupKey = record.date + "||" + record.homework;
-                        if (!groupedHW[groupKey]) {
-                            groupedHW[groupKey] = {
-                                date: record.date,
-                                homework: record.homework,
-                                students: []
-                            };
-                        }
-                        groupedHW[groupKey].students.push({
-                            stdKey: stdKey,
-                            recordKey: recordKey,
-                            name: currentClassStudents[stdKey],
-                            hwStatus: record.hwStatus || 'pending',
-                            seenByParent: record.seenByParent // تم التعديل ليتوافق مع بوابة ولي الأمر
-                        });
-                    }
+        for (let recordKey in data[stdKey]) {
+            let record = data[stdKey][recordKey];
+            
+            if (record.teacherName && record.teacherName !== loggedInTeacher.teacherName) continue;
+            
+            if (record.homework && record.homework.trim() !== '') {
+                let groupKey = record.date + "||" + record.homework;
+                if (!groupedHW[groupKey]) {
+                    groupedHW[groupKey] = {
+                        date: record.date,
+                        homework: record.homework,
+                        students: []
+                    };
                 }
+                groupedHW[groupKey].students.push({
+                    stdKey: stdKey,
+                    recordKey: recordKey,
+                    name: currentClassStudents[stdKey],
+                    hwStatus: record.hwStatus || 'pending',
+                    seenByParent: record.seenByParent 
+                });
             }
         }
+    }
 
-        let listHTML = "";
-        let sortedGroups = Object.keys(groupedHW).sort((a,b) => b.localeCompare(a)); 
+    let listHTML = "";
+    let sortedGroups = Object.keys(groupedHW).sort((a,b) => b.localeCompare(a)); 
 
-        if (sortedGroups.length === 0) {
-            listHTML = `<div style="text-align:center; color:var(--muted); font-weight:700; padding:20px;">لا توجد واجبات مرصودة حالياً 📚</div>`;
-        } else {
-            sortedGroups.forEach((groupKey, index) => {
-                let g = groupedHW[groupKey];
-                let escapedHW = g.homework.replace(/'/g, "\\'");
-                let escapedStudents = encodeURIComponent(JSON.stringify(g.students));
-                let groupId = 'hw_group_' + index;
+    if (sortedGroups.length === 0) {
+        listHTML = `<div style="text-align:center; color:var(--muted); font-weight:700; padding:20px;">لا توجد واجبات مرصودة حالياً 📚</div>`;
+    } else {
+        sortedGroups.forEach((groupKey, index) => {
+            let g = groupedHW[groupKey];
+            let escapedHW = g.homework.replace(/'/g, "\\'");
+            let escapedStudents = encodeURIComponent(JSON.stringify(g.students));
+            let groupId = 'hw_group_' + index;
+            
+            let stNames = g.students.map(s => {
+                let bg = "#f8fafc";
+                let border = "#e2e8f0";
+                let statusBadge = "";
                 
-                let stNames = g.students.map(s => {
-                    let bg = "#f8fafc";
-                    let border = "#e2e8f0";
-                    let statusBadge = "";
+                if(s.hwStatus === 'done') {
+                    bg = "#dcfce7";
+                    border = "#22c55e";
+                    statusBadge = "<span style='color:#166534; font-size:10px; font-weight:bold; background:#bbf7d0; padding:2px 6px; border-radius:4px;'>✅ أتم الواجب</span>";
+                } else if(s.hwStatus === 'not_done') {
+                    bg = "#fee2e2";
+                    border = "#ef4444";
+                    statusBadge = "<span style='color:#991b1b; font-size:10px; font-weight:bold; background:#fecaca; padding:2px 6px; border-radius:4px;'>❌ لم يتم</span>";
+                }
+                
+                let isViewed = (s.seenByParent === true || s.seenByParent === "true");
+                let parentViewedStatus = isViewed ? 
+                    "<span style='font-size:11px; font-weight:bold; color:#16a34a; display:flex; align-items:center; gap:4px;'><svg width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z'></path><circle cx='12' cy='12' r='3'></circle></svg> ولي الأمر اطلع</span>" : 
+                    "<span style='font-size:11px; font-weight:bold; color:var(--muted); display:flex; align-items:center; gap:4px;'><svg width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24'></path><line x1='1' y1='1' x2='23' y2='23'></line></svg> لم يتم الاطلاع</span>";
+
+                return `
+                <div style="display:flex; flex-direction:column; gap:8px; background:`+bg+`; padding:12px; border-radius:10px; border:1px solid `+border+`; width:100%; transition: 0.3s background;">
+                    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <strong style="color:var(--dark); font-size:14px;">`+s.name+`</strong>
+                            `+statusBadge+`
+                        </div>
+                        <div>
+                            `+parentViewedStatus+`
+                        </div>
+                    </div>
+                    <div style="display:flex; flex-wrap:wrap; gap:6px; border-top:1px dashed #cbd5e1; padding-top:8px;">
+                        <button class="hw-action-btn btn-done" onclick="markHomework('`+cls+`', '`+s.stdKey+`', '`+s.recordKey+`', 'done')">✅ أتم الواجب</button>
+                        <button class="hw-action-btn btn-not-done" onclick="markHomework('`+cls+`', '`+s.stdKey+`', '`+s.recordKey+`', 'not_done')">❌ لم يتم</button>
+                        <button class="hw-action-btn btn-reset" onclick="markHomework('`+cls+`', '`+s.stdKey+`', '`+s.recordKey+`', 'pending')">🔄 إعادة</button>
+                        <button class="hw-action-btn btn-edit-hw" onclick="editSingleHomework('`+cls+`', '`+s.stdKey+`', '`+s.recordKey+`', '`+escapedHW+`')">✏️ تعديل</button>
+                        <button class="hw-action-btn btn-delete-hw" onclick="removeHomeworkFromStudent('`+cls+`', '`+s.stdKey+`', '`+s.recordKey+`')">🗑️ حذف</button>
+                    </div>
+                </div>
+                `;
+            }).join('');
+
+            listHTML += `
+            <div style="background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:12px; box-shadow:0 2px 4px rgba(0,0,0,0.02); margin-bottom:12px;">
+                <div style="display:flex; flex-direction:column; gap:10px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="toggleHomeworkGroup('`+groupId+`')">
+                        <div>
+                            <span style="background:var(--primary); color:#fff; padding:4px 8px; border-radius:6px; font-size:11px; font-weight:700;">التاريخ: `+g.date+`</span>
+                            <h4 style="margin:8px 0 0; color:var(--dark); font-size:15px; font-weight:900;">📚 `+g.homework+`</h4>
+                            <div style="font-size:11px; color:var(--muted); margin-top:4px;">عدد الطلاب: `+g.students.length+`</div>
+                        </div>
+                        <div id="icon_`+groupId+`" style="color:var(--muted); transition: transform 0.3s;">▼</div>
+                    </div>
                     
-                    if(s.hwStatus === 'done') {
-                        bg = "#dcfce7";
-                        border = "#22c55e";
-                        statusBadge = "<span style='color:#166534; font-size:10px; font-weight:bold; background:#bbf7d0; padding:2px 6px; border-radius:4px;'>✅ أتم الواجب</span>";
-                    } else if(s.hwStatus === 'not_done') {
-                        bg = "#fee2e2";
-                        border = "#ef4444";
-                        statusBadge = "<span style='color:#991b1b; font-size:10px; font-weight:bold; background:#fecaca; padding:2px 6px; border-radius:4px;'>❌ لم يتم</span>";
-                    }
-                    
-                    // تم التعديل لضمان قراءة القيمة المنطقية والنصية بشكل متساوٍ
-                    let isViewed = (s.seenByParent === true || s.seenByParent === "true");
-                    let parentViewedStatus = isViewed ? 
-                        "<span style='font-size:11px; font-weight:bold; color:#16a34a; display:flex; align-items:center; gap:4px;'><svg width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z'></path><circle cx='12' cy='12' r='3'></circle></svg> ولي الأمر اطلع</span>" : 
-                        "<span style='font-size:11px; font-weight:bold; color:var(--muted); display:flex; align-items:center; gap:4px;'><svg width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24'></path><line x1='1' y1='1' x2='23' y2='23'></line></svg> لم يتم الاطلاع</span>";
-
-                    return `
-                    <div style="display:flex; flex-direction:column; gap:8px; background:`+bg+`; padding:12px; border-radius:10px; border:1px solid `+border+`; width:100%; transition: 0.3s background;">
-                        <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
-                            <div style="display:flex; align-items:center; gap:8px;">
-                                <strong style="color:var(--dark); font-size:14px;">`+s.name+`</strong>
-                                `+statusBadge+`
-                            </div>
-                            <div>
-                                `+parentViewedStatus+`
-                            </div>
-                        </div>
-                        <div style="display:flex; flex-wrap:wrap; gap:6px; border-top:1px dashed #cbd5e1; padding-top:8px;">
-                            <button class="hw-action-btn btn-done" onclick="markHomework('`+cls+`', '`+s.stdKey+`', '`+s.recordKey+`', 'done')">✅ أتم الواجب</button>
-                            <button class="hw-action-btn btn-not-done" onclick="markHomework('`+cls+`', '`+s.stdKey+`', '`+s.recordKey+`', 'not_done')">❌ لم يتم</button>
-                            <button class="hw-action-btn btn-reset" onclick="markHomework('`+cls+`', '`+s.stdKey+`', '`+s.recordKey+`', 'pending')">🔄 إعادة</button>
-                            <button class="hw-action-btn btn-edit-hw" onclick="editSingleHomework('`+cls+`', '`+s.stdKey+`', '`+s.recordKey+`', '`+escapedHW+`')">✏️ تعديل</button>
-                            <button class="hw-action-btn btn-delete-hw" onclick="removeHomeworkFromStudent('`+cls+`', '`+s.stdKey+`', '`+s.recordKey+`')">🗑️ حذف</button>
-                        </div>
+                    <div style="display:flex; gap:6px; border-top:1px solid #f1f5f9; padding-top:10px;">
+                        <button class="edit-btn" style="flex:1; justify-content:center;" onclick="event.stopPropagation(); editGroupHomework('`+cls+`', '`+escapedHW+`', '`+escapedStudents+`')">✏️ تعديل جماعي</button>
+                        <button class="delete-btn" style="flex:1; justify-content:center;" onclick="event.stopPropagation(); deleteGroupHomework('`+cls+`', '`+escapedStudents+`')">🗑️ حذف جماعي</button>
                     </div>
-                    `;
-                }).join('');
+                </div>
 
-                listHTML += `
-                <div style="background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:12px; box-shadow:0 2px 4px rgba(0,0,0,0.02); margin-bottom:12px;">
-                    <div style="display:flex; flex-direction:column; gap:10px;">
-                        <div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="toggleHomeworkGroup('`+groupId+`')">
-                            <div>
-                                <span style="background:var(--primary); color:#fff; padding:4px 8px; border-radius:6px; font-size:11px; font-weight:700;">التاريخ: `+g.date+`</span>
-                                <h4 style="margin:8px 0 0; color:var(--dark); font-size:15px; font-weight:900;">📚 `+g.homework+`</h4>
-                                <div style="font-size:11px; color:var(--muted); margin-top:4px;">عدد الطلاب: `+g.students.length+`</div>
-                            </div>
-                            <div id="icon_`+groupId+`" style="color:var(--muted); transition: transform 0.3s;">▼</div>
-                        </div>
-                        
-                        <div style="display:flex; gap:6px; border-top:1px solid #f1f5f9; padding-top:10px;">
-                            <button class="edit-btn" style="flex:1; justify-content:center;" onclick="event.stopPropagation(); editGroupHomework('`+cls+`', '`+escapedHW+`', '`+escapedStudents+`')">✏️ تعديل جماعي</button>
-                            <button class="delete-btn" style="flex:1; justify-content:center;" onclick="event.stopPropagation(); deleteGroupHomework('`+cls+`', '`+escapedStudents+`')">🗑️ حذف جماعي</button>
-                        </div>
-                    </div>
+                <div id="`+groupId+`" style="display:none; flex-direction:column; gap:8px; margin-top:12px; border-top:1px dashed #cbd5e1; padding-top:12px;">
+                    `+stNames+`
+                </div>
+            </div>`;
+        });
+    }
 
-                    <div id="`+groupId+`" style="display:none; flex-direction:column; gap:8px; margin-top:12px; border-top:1px dashed #cbd5e1; padding-top:12px;">
-                        `+stNames+`
-                    </div>
-                </div>`;
-            });
-        }
-
-        document.getElementById('popupTitle').innerText = "سجل الواجبات المدرسية 📚";
-        document.getElementById('popupStudents').innerHTML = listHTML;
-        document.getElementById('studentsPopup').style.display = 'flex';
-    });
+    document.getElementById('popupTitle').innerText = "سجل الواجبات المدرسية 📚";
+    document.getElementById('popupStudents').innerHTML = listHTML;
+    document.getElementById('studentsPopup').style.display = 'flex';
 }
 
 function showHistoricalList(filterType) {
@@ -1042,165 +1105,157 @@ function showHistoricalList(filterType) {
     if(filterType === 'silver') title = "سجل الجوائز 🥈 الفضية";
     if(filterType === 'bronze') title = "سجل الجوائز 🥉 البرونزية";
 
-    database.ref('evaluations/' + cls).once('value', snapshot => {
-        const data = snapshot.val();
-        let listHTML = "";
+    const data = localData.evaluations[cls] || {};
+    let listHTML = "";
+    let allRecords = [];
+    
+    for (let stdKey in data) {
+        if(!currentClassStudents[stdKey]) continue; 
 
-        if (data) {
-            let allRecords = [];
+        for (let recordKey in data[stdKey]) {
+            let record = data[stdKey][recordKey];
+            if (record.teacherName && record.teacherName !== loggedInTeacher.teacherName) continue;
             
-            for (let stdKey in data) {
-                if(!currentClassStudents[stdKey]) continue; 
-
-                for (let recordKey in data[stdKey]) {
-                    let record = data[stdKey][recordKey];
-                    if (record.teacherName && record.teacherName !== loggedInTeacher.teacherName) continue;
-                    
-                    let match = false;
-                    
-                    if (filterType === 'all') {
-                        if (record.message && record.message.trim() !== '') match = true;
-                    } 
-                    else if (['exc', 'cre', 'vg', 'fa', 'we'].includes(filterType)) {
-                        if (record.level === filterType) match = true;
-                    }
-                    else if (['gold', 'silver', 'bronze'].includes(filterType)) {
-                        if (record.award === filterType) match = true;
-                    }
-
-                    if (match) {
-                        record.stdKey = stdKey;
-                        record.recordKey = recordKey;
-                        record.stdName = currentClassStudents[stdKey];
-                        allRecords.push(record);
-                    }
-                }
+            let match = false;
+            
+            if (filterType === 'all') {
+                if (record.message && record.message.trim() !== '') match = true;
+            } 
+            else if (['exc', 'cre', 'vg', 'fa', 'we'].includes(filterType)) {
+                if (record.level === filterType) match = true;
+            }
+            else if (['gold', 'silver', 'bronze'].includes(filterType)) {
+                if (record.award === filterType) match = true;
             }
 
-            allRecords.sort((a, b) => {
-                let dateA = a.date.split('/').reverse().join('');
-                let dateB = b.date.split('/').reverse().join('');
-                if (dateB !== dateA) return dateB.localeCompare(dateA); 
-                return (b.time || "").localeCompare(a.time || "");
-            });
-
-            if(allRecords.length === 0) {
-                listHTML = `<div style="text-align:center; color:var(--muted); font-weight:700; padding:20px;">لا توجد سجلات مطابقة حالياً 📂</div>`;
-            } else {
-                allRecords.forEach(r => {
-                    let levelLabel = "";
-                    if(r.level === 'exc') levelLabel = "✨ متميز";
-                    if(r.level === 'cre') levelLabel = "🎨 مبدع";
-                    if(r.level === 'vg') levelLabel = "👍 جيد جداً";
-                    if(r.level === 'fa') levelLabel = "🆗 مقبول";
-                    if(r.level === 'we') levelLabel = "⚠️ ضعيف";
-
-                    let awardLabel = "";
-                    if(r.award === 'gold') awardLabel = "🥇 ذهبية";
-                    if(r.award === 'silver') awardLabel = "🥈 فضية";
-                    if(r.award === 'bronze') awardLabel = "🥉 برونزية";
-
-                    let contentHtml = `
-                    <div id="record_`+r.recordKey+`" style="background:#fff; border-right:4px solid var(--primary); padding:12px; border-radius:12px; margin-bottom:10px; box-shadow:0 2px 4px rgba(0,0,0,0.02); position:relative;">
-                        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-                            <div>
-                                <h4 style="margin:0 0 6px 0; color:var(--dark); font-weight:900;">`+r.stdName+`</h4>
-                                <div style="font-size:11px; color:var(--muted); margin-bottom:6px;">🕒 `+r.date+` - `+r.time+`</div>
-                            </div>
-                            <div style="display:flex; gap:5px;">
-                                <button class="edit-btn" onclick="editEvaluationMessage('`+cls+`', '`+r.stdKey+`', '`+r.recordKey+`', '`+(r.message || '')+`')" title="تعديل الملاحظة">✏️</button>
-                                <button class="delete-btn" onclick="deleteEvaluation('`+cls+`', '`+r.stdKey+`', '`+r.recordKey+`')" title="حذف السجل">🗑️</button>
-                            </div>
-                        </div>
-                        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:6px;">
-                            `+(levelLabel ? `<span style="background:#e0e7ff; color:var(--primary); padding:4px 8px; border-radius:6px; font-size:11px; font-weight:700;">`+levelLabel+`</span>` : '')+`
-                            `+(awardLabel ? `<span style="background:#fef3c7; color:#b45309; padding:4px 8px; border-radius:6px; font-size:11px; font-weight:700;">`+awardLabel+`</span>` : '')+`
-                        </div>
-                        `+(r.message ? `<div class="msg-display" style="font-size:12px; color:var(--dark); margin-top:6px; background:#f0fdf4; padding:8px; border-radius:8px; font-weight:600;">💬 الملاحظة: `+r.message+`</div>` : '')+`
-                    </div>`;
-                    
-                    listHTML += contentHtml;
-                });
+            if (match) {
+                record.stdKey = stdKey;
+                record.recordKey = recordKey;
+                record.stdName = currentClassStudents[stdKey];
+                allRecords.push(record);
             }
-        } else {
-             listHTML = `<div style="text-align:center; color:var(--muted); font-weight:700; padding:20px;">لا توجد سجلات مطابقة حالياً 📂</div>`;
         }
+    }
 
-        document.getElementById('popupTitle').innerText = title;
-        document.getElementById('popupStudents').innerHTML = listHTML;
-        document.getElementById('studentsPopup').style.display = 'flex';
+    allRecords.sort((a, b) => {
+        let dateA = a.date.split('/').reverse().join('');
+        let dateB = b.date.split('/').reverse().join('');
+        if (dateB !== dateA) return dateB.localeCompare(dateA); 
+        return (b.time || "").localeCompare(a.time || "");
     });
+
+    if(allRecords.length === 0) {
+        listHTML = `<div style="text-align:center; color:var(--muted); font-weight:700; padding:20px;">لا توجد سجلات مطابقة حالياً 📂</div>`;
+    } else {
+        allRecords.forEach(r => {
+            let levelLabel = "";
+            if(r.level === 'exc') levelLabel = "✨ متميز";
+            if(r.level === 'cre') levelLabel = "🎨 مبدع";
+            if(r.level === 'vg') levelLabel = "👍 جيد جداً";
+            if(r.level === 'fa') levelLabel = "🆗 مقبول";
+            if(r.level === 'we') levelLabel = "⚠️ ضعيف";
+
+            let awardLabel = "";
+            if(r.award === 'gold') awardLabel = "🥇 ذهبية";
+            if(r.award === 'silver') awardLabel = "🥈 فضية";
+            if(r.award === 'bronze') awardLabel = "🥉 برونزية";
+
+            let contentHtml = `
+            <div id="record_`+r.recordKey+`" style="background:#fff; border-right:4px solid var(--primary); padding:12px; border-radius:12px; margin-bottom:10px; box-shadow:0 2px 4px rgba(0,0,0,0.02); position:relative;">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                    <div>
+                        <h4 style="margin:0 0 6px 0; color:var(--dark); font-weight:900;">`+r.stdName+`</h4>
+                        <div style="font-size:11px; color:var(--muted); margin-bottom:6px;">🕒 `+r.date+` - `+r.time+`</div>
+                    </div>
+                    <div style="display:flex; gap:5px;">
+                        <button class="edit-btn" onclick="editEvaluationMessage('`+cls+`', '`+r.stdKey+`', '`+r.recordKey+`', '`+(r.message || '')+`')" title="تعديل الملاحظة">✏️</button>
+                        <button class="delete-btn" onclick="deleteEvaluation('`+cls+`', '`+r.stdKey+`', '`+r.recordKey+`')" title="حذف السجل">🗑️</button>
+                    </div>
+                </div>
+                <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:6px;">
+                    `+(levelLabel ? `<span style="background:#e0e7ff; color:var(--primary); padding:4px 8px; border-radius:6px; font-size:11px; font-weight:700;">`+levelLabel+`</span>` : '')+`
+                    `+(awardLabel ? `<span style="background:#fef3c7; color:#b45309; padding:4px 8px; border-radius:6px; font-size:11px; font-weight:700;">`+awardLabel+`</span>` : '')+`
+                </div>
+                `+(r.message ? `<div class="msg-display" style="font-size:12px; color:var(--dark); margin-top:6px; background:#f0fdf4; padding:8px; border-radius:8px; font-weight:600;">💬 الملاحظة: `+r.message+`</div>` : '')+`
+            </div>`;
+            
+            listHTML += contentHtml;
+        });
+    }
+
+    document.getElementById('popupTitle').innerText = title;
+    document.getElementById('popupStudents').innerHTML = listHTML;
+    document.getElementById('studentsPopup').style.display = 'flex';
 }
 
 window.showStudentHistory = function(stdKey, stdName) {
     const cls = document.getElementById('selClassroom').value;
     if(!cls) return;
 
-    database.ref('evaluations/' + cls + '/' + stdKey).once('value', snapshot => {
-        const data = snapshot.val();
-        let listHTML = "";
-        let allRecords = [];
+    const data = localData.evaluations[cls] ? localData.evaluations[cls][stdKey] : null;
+    let listHTML = "";
+    let allRecords = [];
 
-        if(data) {
-            for(let recordKey in data) {
-                let record = data[recordKey];
-                if (record.teacherName && record.teacherName !== loggedInTeacher.teacherName) continue;
-                record.recordKey = recordKey;
-                allRecords.push(record);
-            }
-            
-            allRecords.sort((a, b) => {
-                let dateA = a.date.split('/').reverse().join('');
-                let dateB = b.date.split('/').reverse().join('');
-                if (dateB !== dateA) return dateB.localeCompare(dateA); 
-                return (b.time || "").localeCompare(a.time || "");
-            });
-            
-            if(allRecords.length === 0) {
-                 listHTML = `<div style="text-align:center; color:var(--muted); font-weight:700; padding:20px;">لا توجد سجلات سابقة لهذا الطالب 📂</div>`;
-            } else {
-                 allRecords.forEach(r => {
-                    let levelLabel = "";
-                    if(r.level === 'exc') levelLabel = "✨ متميز";
-                    if(r.level === 'cre') levelLabel = "🎨 مبدع";
-                    if(r.level === 'vg') levelLabel = "👍 جيد جداً";
-                    if(r.level === 'fa') levelLabel = "🆗 مقبول";
-                    if(r.level === 'we') levelLabel = "⚠️ ضعيف";
-
-                    let awardLabel = "";
-                    if(r.award === 'gold') awardLabel = "🥇 ذهبية";
-                    if(r.award === 'silver') awardLabel = "🥈 فضية";
-                    if(r.award === 'bronze') awardLabel = "🥉 برونزية";
-
-                    let contentHtml = `
-                    <div id="record_`+r.recordKey+`" style="background:#fff; border-right:4px solid var(--secondary); padding:12px; border-radius:12px; margin-bottom:10px; box-shadow:0 2px 4px rgba(0,0,0,0.02);">
-                        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-                            <div style="font-size:11px; color:var(--muted); margin-bottom:6px; font-weight:700;">🕒 `+r.date+` - `+r.time+`</div>
-                            <div style="display:flex; gap:5px;">
-                                <button class="edit-btn" onclick="editEvaluationMessage('`+cls+`', '`+stdKey+`', '`+r.recordKey+`', '`+(r.message || '')+`')" title="تعديل الملاحظة">✏️</button>
-                                <button class="delete-btn" onclick="deleteEvaluation('`+cls+`', '`+stdKey+`', '`+r.recordKey+`')" title="حذف السجل">🗑️</button>
-                            </div>
-                        </div>
-                        
-                        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:4px;">
-                            `+(levelLabel ? `<span style="background:#e0e7ff; color:var(--primary); padding:4px 8px; border-radius:6px; font-size:11px; font-weight:700;">`+levelLabel+`</span>` : '')+`
-                            `+(awardLabel ? `<span style="background:#fef3c7; color:#b45309; padding:4px 8px; border-radius:6px; font-size:11px; font-weight:700;">`+awardLabel+`</span>` : '')+`
-                            `+(r.homework ? `<span style="background:#f1f5f9; color:var(--dark); padding:4px 8px; border-radius:6px; font-size:11px; font-weight:700;">📚 الواجب: `+r.homework+`</span>` : '')+`
-                        </div>
-                        `+(r.message ? `<div class="msg-display" style="font-size:12px; color:var(--dark); margin-top:8px; background:#f0fdf4; padding:8px; border-radius:8px; font-weight:600;">💬 الملاحظة: `+r.message+`</div>` : '')+`
-                    </div>`;
-                    
-                    listHTML += contentHtml;
-                });
-            }
-        } else {
-            listHTML = `<div style="text-align:center; color:var(--muted); font-weight:700; padding:20px;">لا توجد سجلات سابقة لهذا الطالب 📂</div>`;
+    if(data) {
+        for(let recordKey in data) {
+            let record = data[recordKey];
+            if (record.teacherName && record.teacherName !== loggedInTeacher.teacherName) continue;
+            record.recordKey = recordKey;
+            allRecords.push(record);
         }
+        
+        allRecords.sort((a, b) => {
+            let dateA = a.date.split('/').reverse().join('');
+            let dateB = b.date.split('/').reverse().join('');
+            if (dateB !== dateA) return dateB.localeCompare(dateA); 
+            return (b.time || "").localeCompare(a.time || "");
+        });
+        
+        if(allRecords.length === 0) {
+             listHTML = `<div style="text-align:center; color:var(--muted); font-weight:700; padding:20px;">لا توجد سجلات سابقة لهذا الطالب 📂</div>`;
+        } else {
+             allRecords.forEach(r => {
+                let levelLabel = "";
+                if(r.level === 'exc') levelLabel = "✨ متميز";
+                if(r.level === 'cre') levelLabel = "🎨 مبدع";
+                if(r.level === 'vg') levelLabel = "👍 جيد جداً";
+                if(r.level === 'fa') levelLabel = "🆗 مقبول";
+                if(r.level === 'we') levelLabel = "⚠️ ضعيف";
 
-        document.getElementById('popupTitle').innerText = "السجل الشخصي لـ: " + stdName;
-        document.getElementById('popupStudents').innerHTML = listHTML;
-        document.getElementById('studentsPopup').style.display = 'flex';
-    });
+                let awardLabel = "";
+                if(r.award === 'gold') awardLabel = "🥇 ذهبية";
+                if(r.award === 'silver') awardLabel = "🥈 فضية";
+                if(r.award === 'bronze') awardLabel = "🥉 برونزية";
+
+                let contentHtml = `
+                <div id="record_`+r.recordKey+`" style="background:#fff; border-right:4px solid var(--secondary); padding:12px; border-radius:12px; margin-bottom:10px; box-shadow:0 2px 4px rgba(0,0,0,0.02);">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                        <div style="font-size:11px; color:var(--muted); margin-bottom:6px; font-weight:700;">🕒 `+r.date+` - `+r.time+`</div>
+                        <div style="display:flex; gap:5px;">
+                            <button class="edit-btn" onclick="editEvaluationMessage('`+cls+`', '`+stdKey+`', '`+r.recordKey+`', '`+(r.message || '')+`')" title="تعديل الملاحظة">✏️</button>
+                            <button class="delete-btn" onclick="deleteEvaluation('`+cls+`', '`+stdKey+`', '`+r.recordKey+`')" title="حذف السجل">🗑️</button>
+                        </div>
+                    </div>
+                    
+                    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:4px;">
+                        `+(levelLabel ? `<span style="background:#e0e7ff; color:var(--primary); padding:4px 8px; border-radius:6px; font-size:11px; font-weight:700;">`+levelLabel+`</span>` : '')+`
+                        `+(awardLabel ? `<span style="background:#fef3c7; color:#b45309; padding:4px 8px; border-radius:6px; font-size:11px; font-weight:700;">`+awardLabel+`</span>` : '')+`
+                        `+(r.homework ? `<span style="background:#f1f5f9; color:var(--dark); padding:4px 8px; border-radius:6px; font-size:11px; font-weight:700;">📚 الواجب: `+r.homework+`</span>` : '')+`
+                    </div>
+                    `+(r.message ? `<div class="msg-display" style="font-size:12px; color:var(--dark); margin-top:8px; background:#f0fdf4; padding:8px; border-radius:8px; font-weight:600;">💬 الملاحظة: `+r.message+`</div>` : '')+`
+                    `+(r.worksheet ? `<div style="margin-top:8px;"><a href="`+r.worksheet+`" target="_blank" style="font-size:11px; color:#10b981; font-weight:bold; text-decoration:none; display:flex; align-items:center; gap:4px;">📎 تم إرفاق ورقة عمل - اضغط للمشاهدة</a></div>` : '')+`
+                </div>`;
+                
+                listHTML += contentHtml;
+            });
+        }
+    } else {
+        listHTML = `<div style="text-align:center; color:var(--muted); font-weight:700; padding:20px;">لا توجد سجلات سابقة لهذا الطالب 📂</div>`;
+    }
+
+    document.getElementById('popupTitle').innerText = "السجل الشخصي لـ: " + stdName;
+    document.getElementById('popupStudents').innerHTML = listHTML;
+    document.getElementById('studentsPopup').style.display = 'flex';
 }
 
 function closePopup() {
